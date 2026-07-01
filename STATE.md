@@ -1,4 +1,4 @@
-# Loop State — My Project
+# Halo State — My Project
 
 STATUS: ACTIVE
 Last run: never
@@ -6,30 +6,50 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 
 ## Human Setup Status
 
-<!-- Checked by every loop run. Loop will not proceed if any REQUIRED item is incomplete. -->
+<!-- Checked by every loop run. Halo will not proceed if any REQUIRED item is incomplete.
+     Populated by /halo-init after studying the project. -->
 
 ### Required
-- [ ] Vercel CLI installed (`which vercel`)
-- [ ] Vercel authenticated (`vercel whoami`)
-- [ ] Project linked to Vercel (`.vercel/project.json` exists)
-- [ ] PRD file exists (`PRD.md` or `docs/prd.md`)
-- [ ] Git repo initialized (`.git/` exists)
-- [ ] Package manager lockfile exists
+- [ ] _(/halo-init will populate based on detected platform and tech stack)_
 
-### Project-Specific (populated by /loop-init)
-- [ ] Environment variables set in Vercel: _(loop-init will list)_
-- [ ] Database provisioned: _(if required)_
-- [ ] API keys configured: _(if required)_
-- [ ] GitHub remote connected: _(if using PRs)_
+### Project-Specific
+- [ ] _(/halo-init will list env vars, DB setup, API keys, etc.)_
 
 ### Optional
-- [ ] Linear MCP connected
-- [ ] Slack/Discord webhook configured
-- [ ] Vercel Analytics enabled
+- [ ] _(/halo-init will list MCP connectors, webhooks, analytics, etc.)_
+
+## Project Profile
+
+<!-- Filled in by /halo-init after deep study -->
+
+- **Project name**: —
+- **Language**: —
+- **Framework**: —
+- **Test runner**: —
+- **Package manager**: —
+- **Linter**: —
+- **CI provider**: —
+- **Deployment platform**: —
+- **Project maturity**: — _(greenfield / early / established / legacy)_
+- **Build command**: —
+- **Test command**: —
+- **Lint command**: —
+- **Deploy command**: —
+
+## User Decisions (from the grill)
+
+<!-- Answers to questions Halo asked during init. These fine-tune the loop. -->
+
+<!-- Format:
+- Q: "Should new features follow the Server Component pattern?"
+  A: Yes, follow existing patterns in app/dashboard/
+- Q: "Which auth library should I use?"
+  A: NextAuth
+-->
 
 ## Build Backlog
 
-<!-- Stories parsed from PRD by /loop-init. Each story has:
+<!-- Stories parsed from PRD by /halo-init. Each story has:
      ID, title, status, acceptance criteria, dependencies, attempt count, deployment URL.
 
      Status values: pending | in-progress | testing | verified | deployed | blocked | failed
@@ -65,17 +85,12 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 
 ## Current Story
 
-<!-- The story the loop is currently working on. Empty when between stories or paused. -->
-
 - **Story ID**: —
 - **Status**: idle
 - **Started**: —
 - **Attempt**: 0 / 3
 
 ## Deployment History
-
-<!-- Every successful deployment is recorded here so the human can track progress.
-     The most recent deployment is at the top. -->
 
 | Checkpoint | Story | Commit | Preview URL | Deployed At | Status |
 |-----------|-------|--------|-------------|-------------|--------|
@@ -90,14 +105,12 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 
 ## Escalations (waiting on human)
 
-<!-- Items the loop cannot resolve on its own. The human must review these. -->
-
 <!-- Format:
 ### ESC-001 — Short description
 - **Story**: S003
 - **Reason**: 3 failed verification attempts
-- **Details**: Verifier rejected — acceptance criterion 2 not met (form validation missing)
-- **Action needed**: Human review of form validation logic
+- **Details**: Verifier rejected — acceptance criterion 2 not met
+- **Action needed**: Human review of specific area
 - **Escalated at**: 2026-07-01 14:30 UTC
 -->
 
@@ -114,6 +127,6 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 
 ---
 
-Run log: see `loop-run-log.md`
-Budget: see `loop-budget.md`
-Config: see `LOOP.md`
+Run log: see `halo-run-log.md`
+Budget: see `halo-budget.md`
+Config: see `HALO.md`

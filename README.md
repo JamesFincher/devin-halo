@@ -1,135 +1,151 @@
-# Loop Engineering
+# Devin Halo
 
-> Stop prompting. Design the loop. Build autonomously. Deploy checkpoints.
->
-> Based on [cobusgreyling/loop-engineering](https://github.com/cobusgreyling/loop-engineering) — adapted for Devin AI / Windsurf.
+> A loop engine designed for Devin AI. Language-agnostic, platform-agnostic.
+> Point it at any project — design docs, half-built, or production — and Halo
+> studies it, grills you, then builds autonomously with deployed checkpoints.
 
 ## What This Is
 
-A loop engineering system that **builds a project from a PRD autonomously** — implementing user stories with TDD, verifying quality with a maker/checker split, and deploying working checkpoints to Vercel so you can see progress in real time.
+Devin Halo is an autonomous build loop for Devin AI. It doesn't just prompt — it **studies your project deeply, asks you the right questions, and then builds story-by-story with TDD, independent verification, and deployed checkpoints** you can watch in real time.
 
-You point this engine at any project with a PRD, run `/loop-init`, and the loop installs itself, generates a story backlog, and starts building. You walk away. It deploys.
+It works with:
+- **Design docs only** — a PRD and an empty folder
+- **Half-built projects** — existing code that needs features completed
+- **Production codebases** — established projects that need new work
+
+It detects your tech stack, build system, test runner, deployment platform, and risk areas — then fine-tunes the loop accordingly. Vercel? Netlify? AWS? Railway? No deployment at all? Halo adapts.
 
 ## Quick Start
 
-### 1. Install the Loop Engine
-
-Clone this repo to your machine:
+### 1. Install Halo
 
 ```bash
-git clone https://github.com/JamesFincher/loop-engineering.git ~/code/Loop
+git clone https://github.com/JamesFincher/devin-halo.git ~/code/Halo
 ```
 
-### 2. Set Up Your Project
+### 2. Open Your Project in Devin
 
-In your project folder:
+Open any project folder in Windsurf/Devin. The project can be:
+- Empty with just a `PRD.md` or design docs
+- Half-built with existing code
+- A mature codebase that needs new features
 
-```bash
-# Install Vercel CLI and authenticate
-npm i -g vercel
-vercel login
-vercel link
-
-# Initialize git if needed
-git init && git add -A && git commit -m "initial"
-
-# Install dependencies (creates lockfile)
-npm install
-```
-
-### 3. Write Your PRD
-
-Create `PRD.md` in your project root with:
-- Project name and description
-- Tech stack
-- Key features as user stories
-- Acceptance criteria for each feature
-- Required environment variables
-- Risk areas (auth, payments, etc.)
-
-### 4. Run the Loop
-
-Open your project in Windsurf/Devin and run:
+### 3. Run Halo Init
 
 ```
-/loop-init
+/halo-init
 ```
 
-This will:
-- **Install** the workflow files into your project's `.devin/workflows/`
-- **Verify** all prerequisites (Vercel, git, PRD, env vars)
-- **Generate** a user story backlog with testable acceptance criteria
-- **Detect** your tech stack, test runner, CI provider, risk areas
-- **Create** `LOOP.md`, `STATE.md`, `loop-budget.md`, `loop-run-log.md`
-- **Print** a setup summary with next steps
+Halo will:
+1. **Install** workflow files into your project's `.devin/workflows/`
+2. **Study** your codebase exhaustively — architecture, conventions, patterns, tech stack
+3. **Detect** your deployment platform (Vercel, Netlify, AWS, Railway, Fly.io, none, etc.)
+4. **Grill you** — ask targeted questions about requirements, priorities, edge cases, and constraints
+5. **Verify** prerequisites — CLI tools, auth, env vars, git, package manager
+6. **Generate** a user story backlog with specific, testable acceptance criteria
+7. **Fine-tune** the loop configuration based on everything it learned
+8. **Print** your todo list — exactly what you need to do before walking away
 
-Then start building:
+### 4. Complete Your Todo List
+
+Halo gives you a personalized checklist. Typical items might include:
+- `npm i -g vercel` (if Vercel detected)
+- `vercel login && vercel link` (if Vercel detected)
+- `vercel env add DATABASE_URL` (for each missing env var)
+- `pip install -r requirements.txt` (if Python detected)
+- `flyctl auth login` (if Fly.io detected)
+
+### 5. Start the Build Loop
 
 ```
-/loop-build
+/halo-build
 ```
 
-**Walk away.** Each completed story deploys to Vercel preview. Check `STATE.md` for progress and preview URLs.
+**Walk away.** Halo builds story-by-story:
+- Writes tests first (TDD)
+- Implements the minimum code to pass
+- Runs the full test suite
+- Spawns a **separate verifier** to check against acceptance criteria
+- Builds and deploys a checkpoint to your platform
+- Records the deployment URL in `STATE.md`
+- Picks the next story and repeats
 
-## How It Works
+### 6. Watch Progress
 
-### The Build-Deploy Checkpoint Cycle
+- Check your deployment platform for preview URLs appearing as stories complete
+- Check `STATE.md` for progress, escalations, and deployment history
+- Promote checkpoints to production when you're satisfied
+- Respond to escalations — Halo pauses and tells you exactly what it needs
 
-```
-Pick next story from backlog
-  → Read acceptance criteria
-  → Write tests (TDD — tests must fail first)
-  → Implement the minimum code to pass tests
-  → Run full test suite (all tests, not just new ones)
-  → Verifier sub-agent checks each acceptance criterion independently
-  → If REJECTED → revise and retry (max 3 attempts)
-  → If APPROVED → build project
-  → If build succeeds → deploy to Vercel preview
-  → Record preview URL in STATE.md
-  → Git commit: "feat: SXXX — story title"
-  → Pick next story → repeat until backlog empty
-```
+## How Halo Studies Your Project
 
-### The Five Building Blocks
+The `/halo-init` workflow is deliberately thorough. It doesn't just skim — it deep-dives:
 
-1. **Scheduling** — Build loop runs continuously, picking stories one at a time
-2. **Worktrees** — Isolated working directories for parallel agent work
-3. **Skills** — Persistent memory of intent (project conventions, build commands)
-4. **Connectors (MCP)** — Let loops read/write tickets, PRs, Slack, databases
-5. **Sub-agents (Maker/Checker)** — Separate verifier agent confirms every story before deploy
+### Codebase Archaeology
+- Reads your entire directory structure
+- Identifies language, framework, package manager, test runner, linter
+- Reads config files (package.json, pyproject.toml, Cargo.toml, go.mod, etc.)
+- Reads existing conventions (AGENTS.md, CLAUDE.md, .cursorrules, CONTRIBUTING.md)
+- Examines existing code patterns, naming conventions, file organization
+- Checks git history for commit patterns and project maturity
 
-**Plus Memory/State** — `STATE.md` persists across runs so the loop doesn't have amnesia.
+### Deployment Detection
+- Scans for Vercel (`.vercel/`, `vercel.json`)
+- Scans for Netlify (`netlify.toml`, `.netlify/`)
+- Scans for AWS (`.aws/`, `serverless.yml`, `samconfig.toml`)
+- Scans for Railway (`railway.json`)
+- Scans for Fly.io (`fly.toml`)
+- Scans for Docker (`Dockerfile`, `docker-compose.yml`)
+- Scans for GitHub Pages, Cloudflare Pages, Render, Heroku
+- If none found → asks the user what platform they use (or if they deploy at all)
+
+### Risk Assessment
+- Scans for auth, payments, secrets, infrastructure, migrations, security directories
+- Builds a denylist that always requires human review
+- Detects sensitive file patterns (`.env*`, `*credentials*`, `*secret*`)
+
+### The Grill
+
+Halo asks you questions. Not generic questions — **specific questions based on what it found** in your project:
+
+- "I see you're using Next.js 14 with App Router. Should new features follow the Server Component pattern I see in `app/dashboard/`?"
+- "Your PRD mentions user authentication. I see no auth library installed. Should I use NextAuth, Clerk, or something else?"
+- "I found `STRIPE_SECRET_KEY` referenced in your code but not in your Vercel env vars. Do you need Stripe for this build?"
+- "Your existing tests use Vitest. Should I follow the same pattern for new tests?"
+- "I see 3 open issues tagged 'bug'. Should I prioritize fixes over new features?"
+- "Your PRD mentions real-time features. Are you using WebSockets, Server-Sent Events, or polling?"
+
+The answers fine-tune the loop. Halo remembers everything you tell it in `STATE.md`.
 
 ## Repository Structure
 
 ```
-loop-engineering/
+devin-halo/
 ├── .devin/workflows/
-│   └── loop-init.md              # Installer + PRD ingest + backlog generation
+│   └── halo-init.md              # Installer + deep study + grill + backlog generation
 ├── templates/workflows/
-│   ├── loop-build.md             # Main build loop (installed into target project)
-│   ├── loop-verifier.md          # Maker/checker verification (installed)
-│   ├── loop-triage.md            # Daily health report (installed)
-│   └── loop-ci-sweeper.md        # CI + Vercel failure scanning (installed)
-├── LOOP.md                       # Example loop configuration
+│   ├── halo-build.md             # Main build loop (installed into target project)
+│   ├── halo-verifier.md          # Maker/checker verification (installed)
+│   ├── halo-triage.md            # Daily health report (installed)
+│   └── halo-ci-sweeper.md        # CI + deployment failure scanning (installed)
+├── HALO.md                       # Example loop configuration
 ├── STATE.md                      # Example state file
-├── loop-budget.md                # Example budget config
-├── loop-run-log.md               # Example run log
+├── halo-budget.md                # Example budget config
+├── halo-run-log.md               # Example run log
 ├── .gitignore
+├── LICENSE
 └── README.md                     # This file
 ```
 
-When `/loop-init` runs in a target project, it copies the 4 workflow templates from `templates/workflows/` into the project's `.devin/workflows/` directory and generates project-specific config files.
-
 ## Workflows
 
-| Workflow | Purpose | Runs In |
-|----------|---------|---------|
-| `/loop-init` | Install workflows, verify setup, ingest PRD, generate backlog | Loop Engine (this repo) |
-| `/loop-build` | Implement stories with TDD, verify, deploy to Vercel | Target project |
-| `/loop-verifier` | Independent acceptance criteria check (maker/checker) | Target project |
-| `/loop-triage` | Daily build health, deployment status, coverage report | Target project |
-| `/loop-ci-sweeper` | Catch CI/Vercel failures every 15 min | Target project |
+| Workflow | Purpose |
+|----------|---------|
+| `/halo-init` | Install workflows, study project, grill user, verify setup, generate backlog |
+| `/halo-build` | Implement stories with TDD, verify, deploy checkpoints |
+| `/halo-verifier` | Independent acceptance criteria check (maker/checker split) |
+| `/halo-triage` | Daily build health, deployment status, coverage report |
+| `/halo-ci-sweeper` | Catch CI/deployment failures between build cycles |
 
 ## Readiness Levels
 
@@ -142,41 +158,60 @@ When `/loop-init` runs in a target project, it copies the 4 workflow templates f
 
 ## Human Gates
 
-- **No auto-merge to production** — loop deploys to Vercel preview, you promote
-- **No skipping tests** — every story must pass full test suite before deploy
-- **No skipping verification** — every story must pass `/loop-verifier`
+- **No auto-merge to production** — Halo deploys previews, you promote
+- **No skipping tests** — every story must pass full test suite
+- **No skipping verification** — every story must pass `/halo-verifier`
 - **Denylist paths** (auth, payments, secrets, infra, migrations) → always human review
 - **Max 3 attempts per story** → then escalate
 - **2 consecutive failures** → loop pauses, human must review
 - **Kill switch** → set `STATUS: PAUSED` in `STATE.md`
 
+## Tech Stack Support
+
+Halo is language and platform agnostic. It detects and adapts to:
+
+| Category | Detected From | Examples |
+|----------|---------------|----------|
+| **Language** | Lockfiles, config files | TypeScript, Python, Go, Rust, Ruby, Java, PHP |
+| **Framework** | Config files, dependencies | Next.js, Rails, Django, FastAPI, Express, Remix, Astro |
+| **Test runner** | Config files, package scripts | Vitest, Jest, pytest, rspec, cargo test, go test |
+| **Package manager** | Lockfiles | npm, pnpm, yarn, pip, poetry, cargo, go modules, bundler |
+| **CI provider** | CI config dirs | GitHub Actions, GitLab CI, CircleCI, Jenkins |
+| **Deployment** | Platform config files | Vercel, Netlify, AWS, Railway, Fly.io, Docker, Render |
+| **Linter** | Config files | ESLint, Ruff, RuboCop, Clippy, golangci-lint |
+
+If Halo can't detect something, it asks you.
+
+## The Build-Deploy Checkpoint Cycle
+
+```
+Pick next story from backlog
+  → Read acceptance criteria
+  → Write tests (TDD)
+  → Implement the minimum code to pass
+  → Run full test suite
+  → Verifier sub-agent checks each acceptance criterion independently
+  → If REJECTED → revise and retry (max 3 attempts)
+  → If APPROVED → build project
+  → If build succeeds → deploy checkpoint
+  → Record deployment URL in STATE.md
+  → Git commit with story reference
+  → Pick next story → repeat until backlog empty
+```
+
 ## Safety
 
-- **Preview only** — loop never deploys to production without human promotion
-- **Denylist enforcement** — auth, payments, secrets, infra always escalated to human
-- **Token budget caps** — 2M tokens/day, 20 build cycles/day at L2
-- **Rollback** — if a deployment breaks something, loop reverts to last known good commit
-- **Flaky test handling** — don't "fix" with retries alone, investigate root cause
-
-## What You Need Before Walking Away
-
-| # | Requirement | Command |
-|---|-------------|---------|
-| 1 | Vercel CLI installed | `npm i -g vercel` |
-| 2 | Vercel authenticated | `vercel login` |
-| 3 | Project linked to Vercel | `vercel link` |
-| 4 | PRD file in repo | Write `PRD.md` |
-| 5 | Git initialized | `git init` |
-| 6 | Lockfile exists | `npm install` |
-| 7 | Env vars configured | `vercel env add <VAR>` |
-| 8 | GitHub remote (optional) | `git remote add origin <url>` |
+- **Preview only** — Halo never deploys to production without human promotion
+- **Denylist enforcement** — auth, payments, secrets, infra always escalated
+- **Token budget caps** — configurable per project
+- **Rollback** — if a deployment breaks something, Halo reverts to last known good commit
+- **Kill switch** — `STATUS: PAUSED` in `STATE.md` stops all loops immediately
 
 ## Sources
 
 - [Loop Engineering — Cobus Greyling](https://github.com/cobusgreyling/loop-engineering)
 - [Loop Engineering Essay — Addy Osmani](https://addyosmani.com/blog/loop-engineering/)
 - [Loop Design Checklist](https://github.com/cobusgreyling/loop-engineering/blob/main/docs/loop-design-checklist.md)
-- [Primitives Reference](https://github.com/cobusgreyling/loop-engineering/blob/main/docs/primitives.md)
 
 ## License
 

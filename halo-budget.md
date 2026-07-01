@@ -1,4 +1,4 @@
-# Loop Budget — My Project
+# Halo Budget — My Project
 
 ## Daily Token Caps
 
@@ -29,7 +29,7 @@
 | Run test suite | ~5k | Execute + parse results |
 | Verifier sub-agent | ~50k | Independent review against criteria |
 | Build project | ~5k | Execute build + parse |
-| Deploy to Vercel | ~5k | Execute `vercel` + parse URL |
+| Deploy checkpoint | ~5k | Execute deploy + parse URL |
 | Update state + log | ~10k | Write STATE.md + run log |
 | **Total per cycle** | **~190k** | One story from start to deployed |
 
@@ -38,19 +38,19 @@
 To pause all loops:
 1. Set `STATUS: PAUSED` in `STATE.md`
 2. Or delete the workflow files from `.devin/workflows/`
-3. Or set `LOOP_KILL_SWITCH=true` in your environment
+3. Or set `HALO_KILL_SWITCH=true` in your environment
 
 ## Budget Check Protocol
 
 At the **start** of each build cycle:
-1. Read this file and `loop-run-log.md`
+1. Read this file and `halo-run-log.md`
 2. Sum tokens used today (from run log)
 3. Count build cycles completed today
 4. If over daily cap OR over cycle cap → abort, log "budget exceeded", set `STATUS: PAUSED`
 5. If 2 stories in a row failed verification → abort, escalate to human
 
 At the **end** of each build cycle:
-1. Append token estimate to `loop-run-log.md`
+1. Append token estimate to `halo-run-log.md`
 2. Increment cycle count for today
 
 ## Cost Red Flags
@@ -59,4 +59,4 @@ At the **end** of each build cycle:
 - Build cycle producing >300k tokens consistently → story may be too large, split it
 - Verifier rejecting >80% of stories → implementation quality issue, escalate
 - Backlog empty but loop still running → early exit not working, investigate
-- Deployments failing repeatedly → check Vercel config, escalate after 2 failures
+- Deployments failing repeatedly → check platform config, escalate after 2 failures
