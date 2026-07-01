@@ -33,7 +33,23 @@
 - **Deploy**: https://my-project-abc123.vercel.app
 - **Commit**: a1b2c3d "feat: S001 — project setup and landing page"
 - **Est. tokens**: ~185k
+- **Reasoning trace**: Chose to scaffold with Next.js App Router based on user decision during grill. Wrote tests for routing, layout, and meta tags first. Verifier noted test quality was good. No friction.
+- **Failure patterns hit**: none
+- **Critique instruction for next cycle**: "Next cycle: for API routes, write integration tests that hit the actual endpoint, not just unit tests of the handler."
 - **Notes**: first story, initial project scaffold + landing page
+
+### Cycle 002 — 2026-07-01 14:25 UTC
+- **Story**: S002 — User registration form
+- **Status**: failed (3 attempts)
+- **Tests**: 8 written, 5 passing, 3 failing
+- **Verifier**: REJECTED (acceptance criterion 3 not met — email validation missing)
+- **Build**: succeeded
+- **Deploy**: not deployed (verification failed)
+- **Est. tokens**: ~420k (3 attempts)
+- **Reasoning trace**: First attempt forgot email validation. Second attempt added validation but tests didn't cover edge cases. Third attempt ran out of time. Verifier feedback was specific but the pattern (form validation) was new.
+- **Failure patterns hit**: none (first occurrence — added to patterns)
+- **Critique instruction for next cycle**: "Next cycle: for form-related stories, write validation tests before UI tests."
+- **Notes**: escalated to human — form validation logic needs review
 
 -->
 

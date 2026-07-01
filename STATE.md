@@ -116,10 +116,25 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 
 ## Post-Run Critique (from last cycle)
 
-- High-noise: —
-- False positives: —
+<!-- The critique is both a log AND an instruction for the next cycle.
+     The build loop reads this at the start of each cycle and follows the instruction. -->
+
 - Friction: —
+- False positives: —
 - Adjustment: —
+- **Next-cycle instruction**: —
+
+## Failure Patterns
+
+<!-- Accumulated patterns from stories that failed verification at least once
+     before passing. The build loop reads this to proactively avoid known pitfalls. -->
+
+<!-- Format:
+- **Pattern**: Story type: <type>, Failure: <what failed>, Fix: <what fixed it>
+  First seen: S003, Recurred: S007
+-->
+
+- _(none yet)_
 
 ## Human Overrides
 
@@ -128,5 +143,6 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 ---
 
 Run log: see `halo-run-log.md`
+Narrative log: see `progress.txt`
 Budget: see `halo-budget.md`
 Config: see `HALO.md`

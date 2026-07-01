@@ -13,7 +13,7 @@ It works with:
 - **Half-built projects** — existing code that needs features completed
 - **Production codebases** — established projects that need new work
 
-It detects your tech stack, build system, test runner, deployment platform, and risk areas — then fine-tunes the loop accordingly. Vercel? Netlify? AWS? Railway? No deployment at all? Halo adapts.
+It detects your tech stack, build system, test runner, deployment platform, and risk areas — then fine-tunes the loop accordingly. Vercel? Netlify? AWS? Railway? Fly.io? No deployment at all? Halo adapts.
 
 ## Quick Start
 
@@ -74,8 +74,114 @@ Halo gives you a personalized checklist. Typical items might include:
 
 - Check your deployment platform for preview URLs appearing as stories complete
 - Check `STATE.md` for progress, escalations, and deployment history
+- Check `progress.txt` for a lightweight narrative log of each cycle
 - Promote checkpoints to production when you're satisfied
 - Respond to escalations — Halo pauses and tells you exactly what it needs
+
+---
+
+## AI Instantiation Instructions
+
+> This section is written for the AI agent (Devin, Claude Code, etc.) that will
+> instantiate Halo into a project. If you are a human, follow the Quick Start above.
+> If you are an AI reading this README to understand how to set up Halo, follow
+> these instructions precisely.
+
+### How to Instantiate Halo in a Project
+
+When a user asks you to set up Halo in their project, follow these steps **in order**:
+
+#### Step 1: Check if Halo is Already Installed
+
+```
+Check if .devin/workflows/halo-build.md exists in the current project.
+If it does → Halo is already installed. Ask the user if they want to re-run /halo-init.
+If it doesn't → proceed to Step 2.
+```
+
+#### Step 2: Locate the Halo Engine
+
+```
+Check if ~/code/Halo/templates/workflows/ exists.
+  If yes → this is the Halo Engine. Use it as the source.
+  If no → check if ~/code/Loop/templates/workflows/ exists.
+    If yes → use that path.
+    If no → clone the Halo Engine:
+      git clone https://github.com/JamesFincher/devin-halo.git /tmp/devin-halo
+      Use /tmp/devin-halo/templates/workflows/ as the source.
+      Clean up with rm -rf /tmp/devin-halo when done.
+```
+
+#### Step 3: Install Workflow Files
+
+```
+mkdir -p .devin/workflows
+Copy these files from the Halo Engine's templates/workflows/ into .devin/workflows/:
+  - halo-build.md
+  - halo-verifier.md
+  - halo-triage.md
+  - halo-ci-sweeper.md
+Do NOT copy halo-init.md — it only lives in the Halo Engine.
+Verify all 4 files exist after copying.
+```
+
+#### Step 4: Read the halo-init Workflow
+
+```
+Read the halo-init.md workflow file from the Halo Engine.
+This file contains the full procedure for studying the project, grilling the user,
+verifying prerequisites, and generating the backlog.
+Follow its steps precisely.
+```
+
+#### Step 5: Execute the halo-init Procedure
+
+Follow the phases defined in `halo-init.md`:
+
+1. **Phase 1: Deep Project Study** — Read the entire codebase. Detect language, framework, test runner, linter, package manager, CI provider, deployment platform, risk areas, project maturity. Read existing conventions (AGENTS.md, CLAUDE.md, .cursorrules, CONTRIBUTING.md). Read the PRD or design docs.
+
+2. **Phase 2: Grill the User** — Ask specific, targeted questions based on what you found. Not generic questions — questions that prove you studied the project. Record all answers in STATE.md under "User Decisions (from the grill)".
+
+3. **Phase 3: Verify Prerequisites** — Check git, package manager, PRD, deployment platform CLI, env vars, GitHub remote. Generate the human's todo list with exact commands. Write it to STATE.md. If anything is missing, print the todo list and stop — do NOT proceed to build until everything is verified.
+
+4. **Phase 4: Generate Story Backlog** — Parse the PRD into user stories. Each story needs: ID, title, priority, dependencies, 2-6 specific testable acceptance criteria, estimated complexity. Order by dependency + priority. Write to STATE.md.
+
+5. **Phase 5: Generate Configuration Files** — Create HALO.md, STATE.md, halo-budget.md, halo-run-log.md, AGENTS.md. All customized based on what you detected.
+
+6. **Phase 6: Report** — Print the full setup summary with project profile, user decisions, setup status, backlog summary, denylist paths, budget, files generated, and the human's todo list.
+
+#### Step 6: Hand Off to the Human
+
+After completing init:
+- Print the human's todo list with exact commands
+- Tell them to complete the todo list, then run `/halo-build`
+- Do NOT start building until the human confirms their todo list is complete
+
+#### Step 7: Build Loop (when human is ready)
+
+When the human says they're ready and runs `/halo-build`:
+- Read the `halo-build.md` workflow file
+- Follow its steps precisely
+- The loop runs continuously: pick story → TDD → test → verify → build → deploy → repeat
+- Respect all human gates, budget caps, cycle caps, and the kill switch
+- Log everything to `halo-run-log.md` and `progress.txt`
+
+### Important Rules for the AI
+
+- **Study deeply before asking questions** — the grill should show you understand the project
+- **Never proceed if required setup is incomplete** — print the todo list and stop
+- **Every story must have specific, testable acceptance criteria**
+- **The implementer cannot mark its own work done** — always spawn a separate verifier
+- **No production deployments** — preview/staging only
+- **No touching denylist paths** without human approval
+- **Read the last cycle's critique as an instruction** — not just a log
+- **Check for no-progress** — if git state is identical to last cycle, halt immediately
+- **Log reasoning traces** — record why you made decisions, not just what you did
+- **Track failure patterns** — if a story type fails repeatedly, note the pattern and proactively avoid it
+- **Be tech-agnostic** — use whatever build/test/lint/deploy commands the project uses
+- **If you can't detect something, ask** — don't assume
+
+---
 
 ## How Halo Studies Your Project
 
@@ -122,20 +228,27 @@ The answers fine-tune the loop. Halo remembers everything you tell it in `STATE.
 ```
 devin-halo/
 ├── .devin/workflows/
-│   └── halo-init.md              # Installer + deep study + grill + backlog generation
+│   ├── halo-init.md              # Installer + deep study + grill + backlog generation
+│   ├── halo-build.md             # Main build loop (also in templates/)
+│   ├── halo-verifier.md          # Maker/checker verification (also in templates/)
+│   ├── halo-triage.md            # Daily health report (also in templates/)
+│   └── halo-ci-sweeper.md        # CI + deployment failure scanning (also in templates/)
 ├── templates/workflows/
-│   ├── halo-build.md             # Main build loop (installed into target project)
-│   ├── halo-verifier.md          # Maker/checker verification (installed)
-│   ├── halo-triage.md            # Daily health report (installed)
-│   └── halo-ci-sweeper.md        # CI + deployment failure scanning (installed)
+│   ├── halo-build.md             # Templates copied into target projects by halo-init
+│   ├── halo-verifier.md
+│   ├── halo-triage.md
+│   └── halo-ci-sweeper.md
 ├── HALO.md                       # Example loop configuration
-├── STATE.md                      # Example state file
+├── STATE.md                      # Example state file (backlog, deployments, patterns)
 ├── halo-budget.md                # Example budget config
-├── halo-run-log.md               # Example run log
+├── halo-run-log.md               # Example run log (with reasoning traces)
+├── halo-runner.sh                # Ralph Loop wrapper script for persistent execution
 ├── .gitignore
 ├── LICENSE
 └── README.md                     # This file
 ```
+
+When `/halo-init` runs in a target project, it copies the 4 workflow templates from `templates/workflows/` into the project's `.devin/workflows/` directory and generates project-specific config files.
 
 ## Workflows
 
@@ -147,6 +260,56 @@ devin-halo/
 | `/halo-triage` | Daily build health, deployment status, coverage report |
 | `/halo-ci-sweeper` | Catch CI/deployment failures between build cycles |
 
+## The Ralph Loop Wrapper
+
+`halo-runner.sh` is a persistent wrapper script that keeps the build loop running until the backlog is complete, paused, or an escalation needs human attention.
+
+```bash
+# Run in current directory
+./halo-runner.sh
+
+# Run in a specific project
+./halo-runner.sh /path/to/project
+```
+
+The wrapper:
+1. Checks `STATE.md` for `STATUS: ACTIVE`
+2. Invokes the build workflow
+3. Waits for completion
+4. Repeats until `STATUS` is `PAUSED`, `COMPLETE`, or escalations are unresolved
+5. Stops immediately on kill switch or safety cap (50 runs)
+
+**In Devin/Windsurf**: The IDE handles workflow re-invocation. The wrapper is for terminal/CI contexts.
+
+## Memory Architecture
+
+Halo uses a tiered memory system to prevent context rot:
+
+| Layer | File | Purpose | Read When |
+|-------|------|---------|-----------|
+| **Procedural** | `AGENTS.md` | Build/test/lint/deploy commands, conventions | Every cycle start |
+| **State** | `STATE.md` | Story backlog, deployments, escalations, user decisions, failure patterns | Every cycle start |
+| **Narrative** | `progress.txt` | 2-3 line summary per cycle — lightweight context bridge | Every cycle start |
+| **Audit** | `halo-run-log.md` | Full cycle history with reasoning traces, token costs | Budget checks, debugging |
+| **Config** | `HALO.md` | Gates, denylist, budget caps, deployment strategy | Every cycle start |
+
+Each cycle starts fresh by reading state from disk — no reliance on chat history. This prevents context rot on long-running sessions.
+
+## Safety Rails
+
+| Rail | What It Does |
+|------|-------------|
+| **No-progress detection** | If git state is identical between cycles, halts immediately |
+| **Budget caps** | 2M tokens/day, 20 cycles/day — pauses when exceeded |
+| **Per-story attempt cap** | 3 verification attempts, then escalate |
+| **Consecutive failure halt** | 2 stories in a row fail → pause |
+| **Denylist enforcement** | Auth, payments, secrets, infra, migrations → always human review |
+| **Preview only** | Never deploys to production without human promotion |
+| **Kill switch** | `STATUS: PAUSED` in `STATE.md` stops everything |
+| **Ralph Loop safety cap** | Wrapper script stops after 50 runs |
+| **Failure pattern tracking** | Accumulates patterns to proactively avoid known pitfalls |
+| **Actionable critique** | Each cycle's critique is read as an instruction by the next cycle |
+
 ## Readiness Levels
 
 | Level | Description | What's Active |
@@ -155,16 +318,6 @@ devin-halo/
 | **L1 — Report** | Triage only, no building | Triage + CI Sweeper |
 | **L2 — Assisted** | Build + test + verify + deploy checkpoints | All loops active |
 | **L3 — Unattended** | Full autonomy including PR creation and merge | Future |
-
-## Human Gates
-
-- **No auto-merge to production** — Halo deploys previews, you promote
-- **No skipping tests** — every story must pass full test suite
-- **No skipping verification** — every story must pass `/halo-verifier`
-- **Denylist paths** (auth, payments, secrets, infra, migrations) → always human review
-- **Max 3 attempts per story** → then escalate
-- **2 consecutive failures** → loop pauses, human must review
-- **Kill switch** → set `STATUS: PAUSED` in `STATE.md`
 
 ## Tech Stack Support
 
@@ -181,31 +334,6 @@ Halo is language and platform agnostic. It detects and adapts to:
 | **Linter** | Config files | ESLint, Ruff, RuboCop, Clippy, golangci-lint |
 
 If Halo can't detect something, it asks you.
-
-## The Build-Deploy Checkpoint Cycle
-
-```
-Pick next story from backlog
-  → Read acceptance criteria
-  → Write tests (TDD)
-  → Implement the minimum code to pass
-  → Run full test suite
-  → Verifier sub-agent checks each acceptance criterion independently
-  → If REJECTED → revise and retry (max 3 attempts)
-  → If APPROVED → build project
-  → If build succeeds → deploy checkpoint
-  → Record deployment URL in STATE.md
-  → Git commit with story reference
-  → Pick next story → repeat until backlog empty
-```
-
-## Safety
-
-- **Preview only** — Halo never deploys to production without human promotion
-- **Denylist enforcement** — auth, payments, secrets, infra always escalated
-- **Token budget caps** — configurable per project
-- **Rollback** — if a deployment breaks something, Halo reverts to last known good commit
-- **Kill switch** — `STATUS: PAUSED` in `STATE.md` stops all loops immediately
 
 ## Sources
 

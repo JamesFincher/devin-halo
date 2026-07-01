@@ -41,8 +41,21 @@ If ALL checks pass → proceed to build cycle.
 - Read `STATE.md` completely
 - Read `halo-budget.md` — confirm budget remaining
 - Read `halo-run-log.md` — count today's cycles and token spend
+- Read `progress.txt` — read the last few lines for narrative context from prior cycles
+- Read the **Post-Run Critique** from the last cycle in `STATE.md` — treat it as an **instruction for this cycle**, not just a log. If the critique says "next cycle: write validation tests before form layout tests," do that.
+- Read the **Failure Patterns** section in `STATE.md` — if the current story touches a pattern that has failed before, proactively address the known failure mode
 - If budget exceeded → abort, log, set `STATUS: PAUSED`
 - If 2 consecutive stories failed verification → abort, escalate to human
+
+### Step 1b: No-Progress Detection
+- Run `git status --porcelain` and `git log --oneline -1` to capture current state
+- Compare against the last cycle's recorded git state (from `progress.txt`)
+- If the git state is **identical** to the last cycle (same HEAD commit, same working tree) AND no story was deployed last cycle:
+  - This means the previous cycle made no progress — abort immediately
+  - Log "no-progress detected — halting to prevent runaway" to `halo-run-log.md`
+  - Set `STATUS: PAUSED` in `STATE.md`
+  - Escalate to human: "Halo detected no progress between cycles. Last cycle may have failed silently. Review STATE.md and halo-run-log.md."
+- This check prevents the most common weekend disaster: the loop spinning indefinitely without making changes
 
 ### Step 2: Pick Next Story
 - Read the Build Backlog in `STATE.md`
@@ -131,8 +144,20 @@ If ALL checks pass → proceed to build cycle.
     - Update `Last run` timestamp
 - Append to `halo-run-log.md`: cycle number, story, status, tests, verifier, build, deploy URL, est. tokens
 
-### Step 12: Post-Cycle Critique
-- Record in STATE.md: friction, test difficulties, surprising verifier feedback, one adjustment for next cycle
+### Step 12: Post-Cycle Critique and Pattern Tracking
+- Record in STATE.md under Post-Run Critique:
+  - Friction encountered during implementation
+  - Test difficulties
+  - Surprising verifier feedback
+  - **One actionable instruction for the next cycle** (e.g. "Next cycle: for form-related stories, write validation tests before UI tests")
+- If the story failed verification at least once before passing, record the failure pattern in STATE.md under Failure Patterns:
+  - Pattern: "Story type: <type>, Failure: <what failed>, Fix: <what fixed it>"
+  - This accumulates over time and helps the implementer proactively avoid known pitfalls
+- Append a 2-3 line summary to `progress.txt`:
+  ```
+  [2026-07-01 14:25 UTC] S001 deployed | 12 tests passing | HEAD: a1b2c3d | No friction | Next: pick S002
+  ```
+  This is the lightweight narrative bridge — cheap to read, gives instant context
 
 ### Step 13: Repeat or Exit
 - Budget remaining AND cycles remaining AND stories pending → go to Step 1
@@ -176,6 +201,9 @@ If ALL checks pass → proceed to build cycle.
 | Loop runs forever on blocked stories | Early exit when all pending stories have unmet dependencies |
 | Token budget exhausted mid-story | Save progress in STATE.md and pause |
 | Consecutive failures indicate systemic issue | Pause after 2 — human investigates |
+| No progress between cycles | Step 1b detects identical git state and halts immediately |
+| Same failure pattern repeats | Failure Patterns section in STATE.md tracks and helps proactively avoid |
+| Critique ignored | Step 1 reads last critique as an instruction, not just a log |
 
 ## What the Human Sees
 
