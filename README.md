@@ -359,6 +359,7 @@ Each cycle starts fresh by reading state from disk — no reliance on chat histo
 | **Ralph Loop safety cap** | Wrapper script stops after 50 runs |
 | **Failure pattern tracking** | Accumulates patterns to proactively avoid known pitfalls |
 | **Actionable critique** | Each cycle's critique is read as an instruction by the next cycle |
+| **Framework self-test** | Validates Halo engine integrity (file health, template match, runner sanity, state consistency) |
 
 ## Readiness Levels
 

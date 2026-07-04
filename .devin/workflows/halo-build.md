@@ -14,6 +14,104 @@ description: Halo Build Loop — pick next user story, implement with TDD, verif
 - When there are pending stories in the backlog
 - When the human wants to walk away and let Halo build
 
+## Self-Test Mode
+
+Halo can validate its own framework integrity before running any build cycle. This is optional — skip unless explicitly requested.
+
+### When to Use Self-Test
+- Before the first build cycle on a new project
+- After updating the Halo engine (pulling new templates, modifying workflows)
+- When the build loop behaves unexpectedly
+- Periodically as a cron job to detect framework drift
+
+### Step 0s: Run Halo Self-Test
+
+If the human explicitly requested self-test mode (or if more than 7 days since last test), run Halo's own integrity checks:
+
+1. **Framework file integrity** — verify all required Halo files exist and are non-empty:
+   - `.devin/workflows/halo-init.md` — min 50 lines
+   - `.devin/workflows/halo-build.md` — min 200 lines
+   - `.devin/workflows/halo-verifier.md` — min 50 lines
+   - `.devin/workflows/halo-triage.md` — min 30 lines
+   - `.devin/workflows/halo-ci-sweeper.md` — min 30 lines
+   - `templates/workflows/halo-build.md` — min 200 lines
+   - `templates/workflows/halo-verifier.md` — min 50 lines
+   - `templates/workflows/halo-triage.md` — min 30 lines
+   - `templates/workflows/halo-ci-sweeper.md` — min 30 lines
+   - `halo-runner.sh` — executable, min 100 lines
+   - `HALO.md` — min 50 lines
+   - `STATE.md` — min 50 lines
+   - `README.md` — min 10 lines
+   - `halo-budget.md` — min 30 lines
+   - **If any file is missing or under the line threshold** → log warning, continue (non-fatal — the build loop may not use all files)
+
+2. **Template-workflow consistency** — compare active workflows against templates:
+   - `halo-build.md` vs `templates/workflows/halo-build.md` — structural section count should match (±2)
+   - `halo-verifier.md` vs `templates/workflows/halo-verifier.md` — structural section count should match (±2)
+   - `halo-triage.md` vs `templates/workflows/halo-triage.md` — structural section count should match (±2)
+   - `halo-ci-sweeper.md` vs `templates/workflows/halo-ci-sweeper.md` — structural section count should match (±2)
+   - **If any mismatch ≥ 3 sections** → log warning: "Template drift detected in [file] — active workflow has diverged significantly from template"
+   - If no templates exist → skip (project workflows may be custom)
+
+3. **Runner integrity** — verify `halo-runner.sh`:
+   - `halo-runner.sh` is executable: `test -x halo-runner.sh`
+   - `halo-runner.sh` calls `STATE.md` (grep for `STATE.md` in the runner)
+   - `halo-runner.sh` has safety cap (grep for `MAX_RUNS` or `max_runs`)
+   - **If any check fails** → log error, flag as medium-severity finding
+
+4. **State file consistency** — verify `STATE.md` internal consistency:
+   - STATUS field is present and has a valid value (ACTIVE/PAUSED/COMPLETE)
+   - Story status counts match actual story entries:
+     - Count stories by status tag in the Story Status Summary section
+     - Compare each count against the Stories section
+     - **If counts don't match** → fix automatically, log: "Fixed STATE.md story count — [status] showed [N] but actual is [M]"
+   - Last run timestamp is parseable (if it exists)
+   - No duplicate story IDs
+   - **If no stories exist** → skip (fresh project, /halo-init hasn't run yet)
+
+5. **Halo config health** — verify `HALO.md` references are resolvable:
+   - All `STATE.md`, `halo-budget.md`, `halo-run-log.md` cross-references point to real files
+   - Readiness level is a recognized value (L0/L1/L2/L3)
+   - Active loops table has no 'Status' cells with invalid values
+   - Budget section has numeric, non-zero values
+   - **If any config check fails** → log warning with the specific issue
+
+6. **Compile self-test report**:
+   ```
+   ┌──────────────────────────────────────┐
+   │ HALO SELF-TEST REPORT                │
+   ├──────────────────────────────────────┤
+   │ Framework files:    PASS/FAIL (N/N)  │
+   │ Template match:     PASS/WARN/SKIP   │
+   │ Runner integrity:   PASS/FAIL (N/N)  │
+   │ State consistency:  PASS/FIXED/SKIP  │
+   │ Config health:      PASS/FAIL (N/N)  │
+   ├──────────────────────────────────────┤
+   │ OVERALL:            PASS/WARN/FAIL   │
+   │ Findings:           N issues         │
+   │ Timestamp:          YYYY-MM-DDTHH:mm │
+   └──────────────────────────────────────┘
+   ```
+   - PASS = zero failures, zero warnings
+   - WARN = at least one warning, zero failures
+   - FAIL = at least one failure
+   - Append the report to `halo-run-log.md` under a "Self-Test" section
+   - If OVERALL is FAIL → flag as "Halo framework integrity issue" and recommend re-running `/halo-init`
+
+7. **Record last self-test timestamp** in `STATE.md` under a new `## Self-Test` section (or update existing):
+   ```
+   ## Self-Test
+   - **Last run**: 2026-07-04T13:30UTC
+   - **Result**: PASS | WARN | FAIL
+   - **Findings**: N issues
+   - **Next scheduled**: 2026-07-11T13:30UTC (7 days)
+   ```
+
+8. **Continue or halt**:
+   - If OVERALL is PASS or WARN → proceed to step 1 (normal build cycle)
+   - If OVERALL is FAIL → abort immediately with: "Halo self-test failed. Framework integrity compromised. Re-run /halo-init to restore framework files before proceeding."
+   - Self-test does not count toward the story attempt or cycle budget
+
 ## Prerequisites
 
 Halo checks ALL of these before every cycle. If any fail, Halo aborts and tells the human exactly what to fix.
@@ -287,6 +385,8 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 | **Verifier rejection rate > 80% on last 5 stories** | Step 0b detects → pauses loop; systemic quality issue, not budget |
 | **No deploy after 5 cycles** | Step 0b tracks cycles-since-deploy → pauses loop; tokens flowing with zero output |
 | **Evidence not captured** | Step 6 + Step 10 write raw test output + coverage + deploy evidence to .halo/evidence/; verifier Step 7 blocks APPROVED if artifacts are MISSING |
+| **Halo framework files missing/drifted** | Self-Test (Step 0s) detects and reports before build; FAIL → abort with /halo-init recommendation |
+| **Self-test fails mid-project** | Step 0s catches drift from engine updates; re-run /halo-init if templates diverge >3 sections |
 
 ## What the Human Sees
 

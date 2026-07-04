@@ -138,6 +138,15 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 
 - _(none yet)_
 
+## Self-Test
+
+<!-- Record of Halo framework integrity checks. Updated by the build loop. -->
+
+- **Last run**: —
+- **Result**: —
+- **Findings**: 0
+- **Next scheduled**: —
+
 ## Human Overrides
 
 <!-- Record any human decisions that overrode the loop. -->

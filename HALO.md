@@ -72,6 +72,7 @@ After step 10, you can walk away. Check your deployment platform for checkpoints
 | Triage | 1d | L1 report-only | `/halo-triage` | Monitor build health, deployment status, coverage |
 | CI Sweeper | 15m | L1 report-only | `/halo-ci-sweeper` | Catch build/deploy failures quickly |
 | Verifier | On-demand | Active | `/halo-verifier` | Maker/checker for every story before deploy |
+| Self-Test | 7d (or on-demand) | L1 report-only | `/halo-build` (Step 0s) | Framework integrity check — validates Halo engine health |
 
 ## Build-Deploy Checkpoint Cycle
 
