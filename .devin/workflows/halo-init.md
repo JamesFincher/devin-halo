@@ -130,14 +130,62 @@ Spend significant time understanding the project. This is not a quick scan — b
     - If none detected → ask the user: "I couldn't detect a deployment platform. Do you use one (Vercel, Netlify, Fly.io, AWS, etc.) or should I skip deployment?"
 
 14. **Detect risk areas**
-    - Scan for denylist-worthy directories:
+    - **Directory-based risk scan** (denylist-worthy paths):
       - `auth/`, `authentication/`, `**/auth/**`
       - `payment/`, `payments/`, `billing/`, `stripe/`
       - `secret*/`, `**/*.env*`, `**/credentials/**`
       - `infra/`, `infrastructure/`, `deploy/`, `terraform/`
       - `migration*/`, `db/migrate/`
       - `security/`, `**/security/**`
-    - Record all found paths
+      - Record all found paths
+
+    - **Dependency vulnerability scan** (CVE detection):
+      - Node.js: run `npm audit --json` (or `pnpm audit --json`, `yarn audit --json`) — parse `vulnerabilities` object for severity (critical/high/moderate/low), CVE IDs, and fix versions
+      - Python: run `pip-audit` or `safety check --json` (if available) — parse for CVE IDs and affected versions
+      - Ruby: run `bundle audit check` (if bundler-audit installed) — parse advisory IDs
+      - Go: run `govulncheck ./...` (Go 1.18+) — parse for CVE IDs and affected symbols
+      - Rust: run `cargo audit` — parse advisory IDs and affected crate versions
+      - Java: check pom.xml/build.gradle dependency versions against known advisory databases
+      - If no audit tool is available → note "no vulnerability scanner detected — recommend adding one to CI"
+      - Record critical/high vulnerabilities to STATE.md under "Security Risks" — these may require dedicated remediation stories before feature work begins
+
+    - **Hardcoded secrets detection**:
+      - Scan all source files (excluding `node_modules/`, `vendor/`, `.git/`, `*.lock`, `package-lock.json`, `dist/`, `build/`, `.next/`) for:
+        - API keys: `(?i)(api[_-]?key|apikey)\s*[=:]\s*['"][A-Za-z0-9]{20,}['"]`
+        - AWS credentials: `AKIA[0-9A-Z]{16}` (access key ID), `(?i)aws_secret_access_key\s*[=:]`
+        - Private keys: `-----BEGIN (RSA |EC |OPENSSH |)PRIVATE KEY-----`
+        - Database connection strings: `(?i)(mongodb|postgres|postgresql|mysql|redis)://[^:\s]+:[^@\s]+@`
+        - Generic secrets: `(?i)(token|secret|password|passwd|pwd)\s*[=:]\s*['"][^\s'"]{8,}['"]`
+        - JWT tokens: `eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}`
+        - Provider-specific keys: Stripe (`sk_live_`, `sk_test_`, `rk_live_`), GitHub (`gh[pousr]_[A-Za-z0-9]{36}`), Slack (`xox[baprs]-`), Twilio (`SK[0-9a-f]{32}`)
+      - Use `git log -p --all -S '<pattern>'` to detect secrets committed in git history (not just working tree)
+      - Exclude known false-positive patterns: placeholder values (`your-api-key-here`, `xxxx`, `example`, `test`, `dummy`, `changeme`, `placeholder`), environment variable references (`process.env.`, `${VAR}`, `os.environ`, `os.getenv`), documentation/examples directories
+      - Check for `.env` files tracked in git: `git ls-files '*.env'` — any tracked `.env` file is a HIGH severity finding
+      - Verify `.gitignore` contains proper secret exclusion patterns (`.env`, `*.pem`, `*.key`, `credentials/`)
+      - Record all findings to STATE.md under "Security Risks" with file path, line number, and matched pattern type; HIGH/CRITICAL severity findings should block the build loop until resolved or explicitly approved
+
+    - **Rate limiting and abuse prevention detection**:
+      - Check for rate limiting middleware/libraries in dependencies:
+        - Node.js/Express: `express-rate-limit`, `rate-limiter-flexible` in package.json
+        - Python/Django: `django-ratelimit`, DRF throttle classes (`DEFAULT_THROTTLE_CLASSES`)
+        - Python/FastAPI: `slowapi`, `fastapi-limiter`
+        - Python/Flask: `Flask-Limiter`
+        - Ruby/Rails: `rack-attack`, Rails built-in rate limiting
+        - Go: `golang.org/x/time/rate`, `github.com/didip/tollbooth`, `github.com/ulule/limiter`
+        - General: Redis-based rate limiting (check for `INCR` + `EXPIRE` patterns or `redis-cell` module)
+      - Check API route definitions for rate limiting decorators/middleware:
+        - Search for `@ratelimit`, `@throttle`, `@rate_limit`, `RateLimitMiddleware`, `slowapi.limit`, `@limiter.limit`
+        - Flag sensitive API endpoints (POST/PUT/DELETE routes, auth/login, password reset, registration, file upload) that lack rate limiting decorators
+      - Check for authentication brute-force protection:
+        - Account lockout policies, exponential backoff, CAPTCHA integration
+        - Login endpoints specifically should have rate limiting
+      - Check for API authentication/authorization coverage:
+        - API key validation, JWT verification, OAuth scope checking on protected routes
+        - Flag endpoints handling sensitive data without authentication checks
+      - If the project exposes API endpoints but NO rate limiting detected → flag as critical: "API endpoints detected but no rate limiting infrastructure found — first stories should add rate limiting"
+      - Record findings to STATE.md under "Security Risks"
+
+    - **Security posture summary**: compile all risk findings (directories, CVEs, secrets, rate limiting gaps) into a risk severity matrix (critical/high/medium/low) and record to STATE.md; critical/high items should inform story priority and denylist configuration
 
 15. **Detect project maturity**
     - Check git log: commit count, frequency, recency
@@ -233,9 +281,12 @@ Ask targeted, specific questions based on what you found. Not generic questions 
     - "I detected [platform]. Should I deploy every completed story as a preview, or batch them?"
     - "Are there environment variables or secrets I should know about that aren't in the PRD?"
 
-25. **Risk questions** (ask 1-2, if risk areas detected):
+25. **Risk questions** (ask 1-3, if risk areas detected):
     - "I found [auth/payments/secrets] code in [path]. Should I treat this as a denylist path (human review required) or can the loop work on it?"
     - "Are there any areas of the codebase I should never touch without explicit approval?"
+    - **Vulnerability questions** (if CVEs detected): "I found [N] critical/high vulnerabilities via [audit tool] in [package X, Y]. Should remediation stories be prioritized before new features? Which can be deferred?"
+    - **Secret exposure questions** (if hardcoded secrets detected): "I detected [N] potential hardcoded [secrets/API keys/tokens] in [files]. Are these real credentials that need immediate rotation, or are they test/placeholder values I should ignore?"
+    - **Rate limiting questions** (if gaps detected): "I found API endpoints but no rate limiting infrastructure. Is rate limiting already handled at the infrastructure layer (API gateway, reverse proxy, WAF), or should I add stories to implement it in the application?"
 
 26. **Record all answers**
     - Write every Q&A pair to `STATE.md` under "User Decisions (from the grill)"
@@ -400,6 +451,18 @@ BACKLOG GENERATED:
 DENYLIST PATHS:
   <list of detected risk paths>
 
+SECURITY POSTURE:
+  Vulnerabilities: <N critical, <N high, <N moderate> via <audit tool or "scanner not available">
+    - Critical/High: <package@version: CVE-ID> → fix: <upgrade to version>
+    ...
+  Hardcoded secrets: <N found> — <severity breakdown>
+    - <file:line> — <type: API key / private key / db connection / provider key>
+    ...
+    (or "none detected")
+  Rate limiting: <detected via <library> on <routes> | gaps: <N> unprotected sensitive endpoints>
+    (or "no API endpoints detected" / "no rate limiting found — story required")
+  .env tracking: <tracked in git: YES/NO> | .gitignore secret patterns: <complete/incomplete>
+
 BUDGET:
   Daily cap: 2M tokens
   Max build cycles/day: 20
@@ -447,6 +510,9 @@ NEXT STEPS:
 - **If you can't detect something, ask** — don't assume
 - **Exclude vendored/dependency directories from analysis** — never analyze `node_modules/`, `vendor/`, `third_party/`, `.venv/`, `dist/`, `build/` for patterns, dead code, or coverage
 - **Architecture patterns drive story structure** — new stories must follow the detected layering and dependency direction; deviations require explicit user approval in the grill phase
+- **Never record actual secret values in STATE.md, HALO.md, or logs** — redact to first 4 characters + `***` (e.g., `sk_l***`); record file path, line number, and pattern type only
+- **Security findings drive story priority** — critical/high vulnerabilities, real hardcoded secrets, and rate limiting gaps on sensitive endpoints should produce high-priority remediation stories before feature work
+- **Secret scanning is advisory, not blocking** — surface findings for user review; the user decides whether a hit is real or a false positive; do not auto-quarantine files
 
 ## Failure Modes & Mitigations
 
@@ -466,3 +532,8 @@ NEXT STEPS:
 | Bus factor = 1 (solo developer) | Flag in STATE.md; ensure stories are self-documenting and don't assume tribal knowledge |
 | PRD and codebase describe different projects (severe drift) | Surface every conflict in the grill; let the user pick the authoritative source per conflict; record verdicts in STATE.md "Truth Source Resolution"; if user cannot resolve, default to codebase as truth |
 | No PRD exists but code is substantial | Treat code as the PRD; derive a synthesized PRD from codebase patterns and confirm it with the user before generating stories |
+| Vulnerability scanner not installed | Note in STATE.md; fall back to manual dependency version checking against advisory feeds; recommend adding scanner to CI as first story |
+| Hardcoded secrets detected (real credentials) | Flag as CRITICAL in STATE.md; do NOT include secret values in logs or STATE.md (redact to first 4 chars + `***`); recommend immediate rotation; block build loop until user confirms rotation or marks as false positive |
+| False-positive flood from secret scanning | Tune exclusion list (placeholders, env var refs, test fixtures); if >50 hits, ask user to confirm which are real before recording |
+| Secrets committed in git history | Flag as CRITICAL; note that `.gitignore` only prevents future commits — recommend `git filter-repo` or BFG Repo-Cleaner to purge history; recommend rotating any exposed credentials |
+| Rate limiting infrastructure missing | Flag in STATE.md; add a high-priority story for rate limiting on sensitive endpoints before feature work that adds more endpoints |
