@@ -35,6 +35,18 @@ Halo checks ALL of these before every cycle. If any fail, Halo aborts and tells 
 
 If ALL checks pass → proceed to build cycle.
 
+### Step 0b: Economic Circuit Breaker
+Before starting a new build cycle, run an economic sanity check using the Spend Ledger in `HALO.md`:
+1. **Read `halo-run-log.md`** and compute:
+   - Running token total (actual) for today — sum `est. tokens` column from today's entries
+   - Per-cycle token trajectory — is the last 3-cycles average trending up or down?
+   - Cycles since last successful deploy — if ≥ 5, this is a Denial-of-Wallet signal
+   - Verifier rejection ratio for last 5 stories — if > 80%, pause
+2. **Check each Spend Ledger signal** from `HALO.md`:
+   - If any signal is RED (over threshold) → log the specific signal that fired, set `STATUS: PAUSED`, escalate to human with: "Economic circuit breaker triggered: [signal name]. Halo-run-log.md has full details."
+3. **Check cost escalation rate**: if per-cycle cost is trending up over 3 consecutive cycles, log a warning and flag in the critique — this may indicate context bloat or increasing story complexity
+4. Only proceed to build cycle if ALL economic signals are GREEN
+
 ## Build Cycle Steps
 
 ### Step 1: Read State and Budget
@@ -149,7 +161,10 @@ If ALL checks pass → proceed to build cycle.
   - Friction encountered during implementation
   - Test difficulties
   - Surprising verifier feedback
+  - Token cost (actual) for this cycle — compare to estimate (~190k)
+  - Cost trajectory: is this cycle more or less expensive than the last 3 cycles?
   - **One actionable instruction for the next cycle** (e.g. "Next cycle: for form-related stories, write validation tests before UI tests")
+- Append cycle token cost to the Spend Ledger in `halo-run-log.md`
 - If the story failed verification at least once before passing, record the failure pattern in STATE.md under Failure Patterns:
   - Pattern: "Story type: <type>, Failure: <what failed>, Fix: <what fixed it>"
   - This accumulates over time and helps the implementer proactively avoid known pitfalls
@@ -204,6 +219,10 @@ If ALL checks pass → proceed to build cycle.
 | No progress between cycles | Step 1b detects identical git state and halts immediately |
 | Same failure pattern repeats | Failure Patterns section in STATE.md tracks and helps proactively avoid |
 | Critique ignored | Step 1 reads last critique as an instruction, not just a log |
+| **Token cost trending up across cycles** | Economic Circuit Breaker (Step 0b) detects trajectory; flag in critique as context-bloat warning |
+| **Denial-of-Wallet — 3 cycles, 2x cost, no deploy** | Step 0b circuit breaker fires → emergency PAUSE before next cycle |
+| **Verifier rejection rate > 80% on last 5 stories** | Step 0b detects → pauses loop; systemic quality issue, not budget |
+| **No deploy after 5 cycles** | Step 0b tracks cycles-since-deploy → pauses loop; tokens flowing with zero output |
 
 ## What the Human Sees
 

@@ -48,15 +48,27 @@ At the **start** of each build cycle:
 3. Count build cycles completed today
 4. If over daily cap OR over cycle cap → abort, log "budget exceeded", set `STATUS: PAUSED`
 5. If 2 stories in a row failed verification → abort, escalate to human
+6. **Run Economic Circuit Breaker** (see `HALO.md` → Economic Governance):
+   - Check per-cycle token trajectory (3-cycle moving average)
+   - Check cycles since last deploy
+   - Check verifier rejection ratio (last 5 stories)
+   - If any economic signal is RED → pause, escalate with signal details
 
 At the **end** of each build cycle:
 1. Append token estimate to `halo-run-log.md`
 2. Increment cycle count for today
+3. Record actual token cost vs estimate in post-cycle critique
+4. Update per-cycle cost trajectory in STATE.md
 
-## Cost Red Flags
+## Cost Red Flags (Extended)
 
-- Same story has had 3 implementation attempts → escalate, stop spending
-- Build cycle producing >300k tokens consistently → story may be too large, split it
-- Verifier rejecting >80% of stories → implementation quality issue, escalate
-- Backlog empty but loop still running → early exit not working, investigate
-- Deployments failing repeatedly → check platform config, escalate after 2 failures
+| Signal | Threshold | Action |
+|--------|-----------|--------|
+| Same story > 3 attempts | Count(attempts) > 3 | Escalate — story is too complex or poorly specified |
+| Per-cycle cost > 300k tokens | Actual tokens > 300k | Flag story as oversized, consider splitting |
+| Verifier rejection > 80% last 5 stories | 4/5 rejected | Pause — systemic implementation quality failure |
+| Runaway cost (Denial-of-Wallet) | 2x normal burn for 3 consecutive cycles | Emergency PAUSE + human escalation |
+| No deploy after 5 cycles | Cycle count since last deploy ≥ 5 | Pause — loop consuming tokens without output |
+| Token trajectory increasing | 3-cycle avg cost rising > 10% per cycle | Flag in critique: context bloat or complexity increase |
+
+

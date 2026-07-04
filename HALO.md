@@ -130,6 +130,37 @@ Pick next story from backlog
 - Check `halo-budget.md` at start and end of each cycle
 - **Kill switch**: Set `STATUS: PAUSED` in `STATE.md` or delete workflow files
 
+### ⚡ Economic Governance — Spend Ledger
+
+Every build cycle tracks actual spend, not just estimates. The Spend Ledger lives in `halo-run-log.md` and is checked before every cycle:
+
+| Signal | Threshold | Action |
+|--------|-----------|--------|
+| Token overrun | Actual > 120% of per-cycle estimate (228k) | Log warning, flag in post-cycle critique |
+| Cycle overrun | Total cycles > 120% of daily cap (24) | Pause, escalate: "token burn rate exceeds budget" |
+| Verifier rejection rate | 2 consecutive verifier REJECTs on same model | Pause loop — implementation quality issue, not budget |
+| Cost escalation rate | Per-cycle token cost trending up over 3 cycles | Flag in critique: "story complexity increasing or context bloat" |
+| One-story death spiral | Same story > 3 attempts with rising token cost per attempt | Escalate to human — story is uneconomical |
+| **Denial-of-Wallet** | 2x normal cost in 3 consecutive cycles without a deploy | Emergency PAUSE — may be a runaway loop consuming tokens with no output |
+
+### Economic Gate — Pre-Cycle Check
+
+Before every build cycle, the loop reads `halo-run-log.md` and computes:
+1. Running token total (actual, not estimate) for today
+2. Per-cycle token trajectory (increasing, stable, decreasing)
+3. Verifier rejection ratio for the last 5 stories
+4. If any signal in the Spend Ledger table is RED → set `STATUS: PAUSED` and escalate with the specific economic signal that fired
+
+### Cost Red Flags (enhanced from halo-budget.md)
+
+| Flag | Threshold | Action |
+|------|-----------|--------|
+| Same story > 3 attempts | Count(attempts) > 3 | Escalate — story is too complex or poorly specified |
+| Per-cycle cost > 300k tokens | Actual tokens > 300k | Flag story as oversized, consider splitting |
+| Verifier rejection > 80% last 5 stories | 4/5 rejected | Pause — systemic implementation quality failure |
+| Runaway cost (Denial-of-Wallet) | 2x normal burn for 3 consecutive cycles | Emergency PAUSE + human escalation |
+| No deploy after 5 cycles | Cycle count since last deploy ≥ 5 | Pause — loop is consuming tokens without output |
+
 ## Maker / Checker Split
 
 - The agent that writes code **cannot** mark its own work "done"
