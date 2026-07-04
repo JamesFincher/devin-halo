@@ -274,12 +274,62 @@ When `/halo-init` runs in a target project, it copies the 4 workflow templates f
 
 The wrapper:
 1. Checks `STATE.md` for `STATUS: ACTIVE`
-2. Invokes the build workflow
+2. Invokes the build workflow (via Devin CLI or IDE — see below)
 3. Waits for completion
 4. Repeats until `STATUS` is `PAUSED`, `COMPLETE`, or escalations are unresolved
 5. Stops immediately on kill switch or safety cap (50 runs)
 
-**In Devin/Windsurf**: The IDE handles workflow re-invocation. The wrapper is for terminal/CI contexts.
+### Devin CLI Integration
+
+The runner auto-detects the Devin CLI (`devin`) and, when authenticated, invokes workflows non-interactively — enabling fully unattended build loops in terminal/CI contexts without needing the IDE open.
+
+**Two invocation modes:**
+
+| Mode | When | How |
+|------|------|-----|
+| **CLI mode** | `devin` in PATH + authenticated | `devin --permission-mode accept-edits -p "<workflow prompt>"` |
+| **IDE mode** | CLI missing or not authenticated | Logs instructions; user/IDE runs `/halo-build` manually |
+
+**Configuration (environment variables):**
+
+| Variable | Default | Values | Purpose |
+|----------|---------|--------|---------|
+| `HALO_CLI_MODE` | `auto` | `auto` \| `always` \| `never` | `auto` = use CLI if available, else IDE. `always` = require CLI, fail if not. `never` = always IDE mode. |
+| `DEVIN_PERMISSION_MODE` | `accept-edits` | `auto` \| `accept-edits` \| `smart` \| `dangerous` | Controls which tools the CLI auto-approves. `accept-edits` auto-approves read + file edits. |
+| `DEVIN_MODEL` | _(unset)_ | e.g. `claude-sonnet-4`, `opus`, `codex` | Optional model override for the build agent. |
+
+**CLI setup (one-time):**
+
+```bash
+# 1. Install the Devin CLI (if not already installed)
+curl -fsSL https://storage.googleapis.com/devin-public/install.sh | bash
+
+# 2. Authenticate
+devin auth login
+
+# 3. Verify
+devin auth status   # should show "Logged in"
+
+# 4. Run the wrapper — it will auto-detect and use CLI mode
+./halo-runner.sh
+```
+
+**Forced CLI mode (fail if CLI unavailable):**
+
+```bash
+HALO_CLI_MODE=always ./halo-runner.sh
+```
+
+**CI/CD usage (fully unattended):**
+
+```bash
+HALO_CLI_MODE=always \
+DEVIN_PERMISSION_MODE=accept-edits \
+DEVIN_MODEL=claude-sonnet-4 \
+./halo-runner.sh /path/to/project
+```
+
+> **Safety:** The wrapper respects all workflow gates (budget caps, denylist paths, human gates, no-progress detection) regardless of CLI/IDE mode. The CLI permission mode controls tool-level auto-approval; the workflow's own gates control story-level and cycle-level safety.
 
 ## Memory Architecture
 
