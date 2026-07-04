@@ -186,12 +186,32 @@ Spend significant time understanding the project. This is not a quick scan — b
     - Read the full PRD or design documents
     - Extract: project name, features, user flows, requirements, constraints
     - If no PRD found → ask the user to describe the project goals
+    - **Detect PRD-vs-codebase conflicts** (critical input for the grill phase):
+      - **Phantom features**: PRD describes a feature with no code, dependency, or config trace anywhere in the repo
+      - **Undocumented features**: Code, dependency, or config suggests a capability the PRD never mentions
+      - **Tech stack drift**: PRD specifies framework X but the lockfile or config shows framework Y
+      - **API contract mismatches**: PRD describes endpoints/routes absent from router definitions, or routes exist with no PRD mention
+      - **Schema drift**: PRD data model vs actual migrations, ORM models, or schema files
+      - **Version conflicts**: PRD references version N but the installed or pinned version is M
+      - **Convention contradictions**: PRD describes an architecture or pattern the codebase consistently violates
+      - Record ALL detected conflicts to STATE.md under "PRD-Codebase Conflicts" — these become the primary grill input
 
 ### Phase 2: Grill the User
 
 Ask targeted, specific questions based on what you found. Not generic questions — questions that show you studied the project.
 
-20. **Architecture questions** (ask 2-4):
+20. **Conflict resolution questions** (ask FIRST, before any other questions — these resolve truth-source ambiguity):
+    - **Phantom feature probing**: "Your PRD describes [feature X], but I found no code, dependency, or config trace for it anywhere. Is [feature X] still planned for this build, or has the scope shifted? Should I treat the PRD as stale on this point?"
+    - **Undocumented capability probing**: "Your codebase has [module/dependency/config Y] that suggests [capability], but the PRD never mentions it. Is this an intentional feature I should treat as in-scope, deprecated code to remove, or infrastructure I should leave alone?"
+    - **Tech stack drift probing**: "Your PRD specifies [framework X], but your lockfile/config shows [framework Y]. Which is the source of truth for new work — the PRD's intent or the code's reality?"
+    - **API contract probing**: "Your PRD describes [endpoints A, B, C], but I only found routes for [A]. Are [B, C] still planned, or has the API scope changed since the PRD was written?"
+    - **Schema drift probing**: "Your PRD data model includes [entity/table Z], but your migrations/schema files don't have it. Should new stories create it, or has the data model moved away from the PRD?"
+    - **Version conflict probing**: "Your PRD references [version N] of [library], but the project is pinned to [version M]. Which should new stories target?"
+    - **Convention contradiction probing**: "Your PRD describes [pattern], but every file in [directory] consistently uses [different pattern]. Should new stories follow the PRD's described pattern or the codebase's established convention?"
+    - **Resolve truth source**: For every detected conflict, ask "When the PRD and the codebase disagree, which should I treat as authoritative?" Record the answer explicitly per conflict in STATE.md under "Truth Source Resolution"
+    - If no conflicts detected → skip this step and proceed to architecture questions
+
+21. **Architecture questions** (ask 2-4):
     - "I detected a [architecture style] with [layering pattern] pattern. Should new features follow this structure I see in [specific dir]?"
     - "I see you're using [framework] with [pattern]. Should new features follow the same [pattern] I see in [specific file/dir]?"
     - "Your project structure has [X]. Should I organize new features the same way?"
@@ -199,36 +219,37 @@ Ask targeted, specific questions based on what you found. Not generic questions 
     - "Your dependency audit shows [module Y] is imported by [N] other files (high coupling). Is this an intentional core module, or technical debt I should be aware of?"
     - "I detected [N] dead/unchanged files (6+ months) still imported by active code. Should stories address cleanup, or is this intentional stability?"
 
-21. **Requirements questions** (ask 2-4):
+22. **Requirements questions** (ask 2-4):
     - "Your PRD mentions [feature X]. Should this support [edge case Y]?"
     - "I see [feature X] referenced but no [component Y]. Is [component Y] in scope for this build?"
     - "Your PRD lists [X features]. Which are must-haves for the first checkpoint vs nice-to-haves?"
 
-22. **Priority questions** (ask 1-3):
+23. **Priority questions** (ask 1-3):
     - "I found [N] open issues/TODOs in the codebase. Should I prioritize fixing these over new features?"
     - "Which feature should be built first — the one users see first, or the one with the most technical risk?"
     - "Is there a deadline or order of operations I should follow?"
 
-23. **Deployment questions** (ask 1-2, if platform detected):
+24. **Deployment questions** (ask 1-2, if platform detected):
     - "I detected [platform]. Should I deploy every completed story as a preview, or batch them?"
     - "Are there environment variables or secrets I should know about that aren't in the PRD?"
 
-24. **Risk questions** (ask 1-2, if risk areas detected):
+25. **Risk questions** (ask 1-2, if risk areas detected):
     - "I found [auth/payments/secrets] code in [path]. Should I treat this as a denylist path (human review required) or can the loop work on it?"
     - "Are there any areas of the codebase I should never touch without explicit approval?"
 
-25. **Record all answers**
+26. **Record all answers**
     - Write every Q&A pair to `STATE.md` under "User Decisions (from the grill)"
+    - Write every PRD-vs-codebase conflict resolution to `STATE.md` under "Truth Source Resolution" (one row per conflict: conflict type, PRD says, code says, user's verdict on which is authoritative)
     - These answers fine-tune the loop's behavior
 
 ### Phase 3: Verify Prerequisites
 
 Check that the human has completed all required setup. Report what's missing with exact commands.
 
-26. **Check git**: `.git/` exists? If not → "Run `git init`"
-27. **Check package manager**: lockfile exists? If not → "Run `<install command>`"
-28. **Check PRD/design docs**: exists? If not → "Create a PRD or design doc"
-29. **Check deployment platform CLI** (if platform detected):
+27. **Check git**: `.git/` exists? If not → "Run `git init`"
+28. **Check package manager**: lockfile exists? If not → "Run `<install command>`"
+29. **Check PRD/design docs**: exists? If not → "Create a PRD or design doc"
+30. **Check deployment platform CLI** (if platform detected):
     - Vercel: `which vercel` → if missing: "Run `npm i -g vercel`"
     - Vercel auth: `vercel whoami` → if not authed: "Run `vercel login`"
     - Vercel link: `.vercel/project.json` → if missing: "Run `vercel link`"
@@ -236,13 +257,13 @@ Check that the human has completed all required setup. Report what's missing wit
     - Fly.io: `which flyctl` → if missing: "Install flyctl"
     - Docker: `docker info` → if not running: "Start Docker daemon"
     - (adapt for each platform)
-30. **Check environment variables** (if platform detected):
+31. **Check environment variables** (if platform detected):
     - List required env vars from PRD analysis
     - Check platform env var list (e.g. `vercel env ls`)
     - Report any missing: "Run `<platform> env add <VAR_NAME>`"
-31. **Check GitHub remote** (optional): `git remote -v` → if empty: "Run `git remote add origin <url>`"
+32. **Check GitHub remote** (optional): `git remote -v` → if empty: "Run `git remote add origin <url>`"
 
-32. **Generate the human's todo list**
+33. **Generate the human's todo list**
     - Compile all missing items into a checklist
     - Print it clearly with exact commands
     - Write it to `STATE.md` under "Human Setup Status"
@@ -250,7 +271,7 @@ Check that the human has completed all required setup. Report what's missing wit
 
 ### Phase 4: Generate Story Backlog
 
-33. **Parse PRD into user stories**
+34. **Parse PRD into user stories**
     - Break each feature into one or more user stories
     - Each story must have:
       - **ID**: S001, S002, etc. (ordered by dependency + priority)
@@ -260,7 +281,7 @@ Check that the human has completed all required setup. Report what's missing wit
       - **Acceptance Criteria**: 2-6 specific, testable criteria
       - **Estimated complexity**: small / medium / large
 
-34. **Story ordering rules**
+35. **Story ordering rules**
     - Foundation/setup stories first (project scaffold, config, test setup)
     - Core domain stories next
     - Enhancement stories last
@@ -268,20 +289,20 @@ Check that the human has completed all required setup. Report what's missing wit
     - High-priority before low-priority when no dependency constraint
     - Respect user's priority answers from the grill
 
-35. **Acceptance criteria rules**
+36. **Acceptance criteria rules**
     - Each criterion must be specific and testable
     - Each criterion should map to at least one test
     - Avoid vague criteria — use concrete, verifiable statements
     - Bad: "User can register"
     - Good: "User can submit a registration form with email and password, and a new account is created in the database"
 
-36. **Write stories to STATE.md**
+37. **Write stories to STATE.md**
     - Populate Build Backlog section
     - Update Story Status Summary table
 
 ### Phase 5: Generate Configuration Files
 
-37. **Generate `HALO.md`** with:
+38. **Generate `HALO.md`** with:
     - Project name and profile from study
     - Human Setup Requirements (platform-specific)
     - Active loops table
@@ -291,23 +312,23 @@ Check that the human has completed all required setup. Report what's missing wit
     - Budget caps
     - Maker/checker policy
 
-38. **Generate `STATE.md`** with:
+39. **Generate `STATE.md`** with:
     - Project Profile (all detected tech stack info)
     - User Decisions (all grill Q&A)
     - Human Setup Status (todo list)
     - Build Backlog (all stories)
     - Empty Current Story, Deployment History, Escalations sections
 
-39. **Generate `halo-budget.md`** with:
+40. **Generate `halo-budget.md`** with:
     - Daily token caps for L2
     - Per-loop budget table
     - Build cycle token breakdown
     - Kill switch instructions
 
-40. **Generate `halo-run-log.md`** with:
+41. **Generate `halo-run-log.md`** with:
     - Empty tables with entry templates
 
-41. **Generate `AGENTS.md`** (or update existing) with:
+42. **Generate `AGENTS.md`** (or update existing) with:
     - Build command (detected)
     - Test command (detected)
     - Lint command (detected)
@@ -318,7 +339,7 @@ Check that the human has completed all required setup. Report what's missing wit
 
 ### Phase 6: Report
 
-42. **Print setup summary**:
+43. **Print setup summary**:
 
 ```
 HALO SETUP COMPLETE — <PROJECT_NAME>
@@ -354,6 +375,11 @@ USER DECISIONS (from grill):
   - <Q1>: <A1>
   - <Q2>: <A2>
   ...
+
+PRD-CODEBASE CONFLICTS (detected and resolved):
+  - <conflict type>: PRD says <X> / code says <Y> → authoritative: <PRD|code|neither — re-architect>
+  ...
+  (or "none detected")
 
 HUMAN SETUP STATUS:
   [x] <completed item>
@@ -403,11 +429,12 @@ NEXT STEPS:
   5. Walk away. Check <platform> for checkpoint deployments.
 ```
 
-43. **Write summary to STATE.md** under "Setup Notes"
+44. **Write summary to STATE.md** under "Setup Notes"
 
 ## Rules
 
 - **Study deeply before asking questions** — the grill should show you understand the project
+- **Resolve PRD-vs-codebase conflicts FIRST** — before asking generic architecture or requirements questions, surface every detected conflict and ask the user which source is authoritative for each one; an unresolved conflict silently corrupts every downstream story and gate
 - **Never proceed if required setup is incomplete** — print the todo list and stop
 - **Every story must have specific, testable acceptance criteria**
 - **Stories must be ordered by dependency and priority**
@@ -437,3 +464,5 @@ NEXT STEPS:
 | Architecture is ambiguous or mixed patterns | Ask user which pattern to follow for new work; record decision in STATE.md |
 | Dead code detection yields false positives (vendored/deps) | Exclude `node_modules/`, `vendor/`, `third_party/`, `*/.venv/`, `dist/`, `build/` from analysis |
 | Bus factor = 1 (solo developer) | Flag in STATE.md; ensure stories are self-documenting and don't assume tribal knowledge |
+| PRD and codebase describe different projects (severe drift) | Surface every conflict in the grill; let the user pick the authoritative source per conflict; record verdicts in STATE.md "Truth Source Resolution"; if user cannot resolve, default to codebase as truth |
+| No PRD exists but code is substantial | Treat code as the PRD; derive a synthesized PRD from codebase patterns and confirm it with the user before generating stories |
