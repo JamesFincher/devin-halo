@@ -127,11 +127,13 @@ Readiness: L2 — Assisted (build + test + verify + deploy checkpoints)
 ## Failure Patterns
 
 <!-- Accumulated patterns from stories that failed verification at least once
-     before passing. The build loop reads this to proactively avoid known pitfalls. -->
+     before passing. The build loop reads this to proactively avoid known pitfalls.
+     Matching is by Story type tag; high-severity patterns are always applied. -->
 
 <!-- Format:
 - **Pattern**: Story type: <type>, Failure: <what failed>, Fix: <what fixed it>
-  First seen: S003, Recurred: S007
+  Severity: low | medium | high
+  First seen: S003, Last seen: S007, Recurrence: 2
 -->
 
 - _(none yet)_

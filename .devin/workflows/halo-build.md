@@ -83,7 +83,8 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 - Read `halo-run-log.md` — count today's cycles and token spend
 - Read `progress.txt` — read the last few lines for narrative context from prior cycles
 - Read the **Post-Run Critique** from the last cycle in `STATE.md` — treat it as an **instruction for this cycle**, not just a log. If the critique says "next cycle: write validation tests before form layout tests," do that.
-- Read the **Failure Patterns** section in `STATE.md` — if the current story touches a pattern that has failed before, proactively address the known failure mode
+- Read the **Failure Patterns** section in `STATE.md` — match the current story's type against accumulated patterns (by the `Story type:` tag); for each match, note the failure mode and the proven fix so EXECUTE can apply it proactively
+- Build a **Pattern Pre-Flight List**: every matching pattern becomes a concrete pitfall the implementer must actively avoid this cycle. Carry this list into Step 4b.
 - If budget exceeded → abort, log, set `STATUS: PAUSED`
 - If 2 consecutive stories failed verification → abort, escalate to human
 
@@ -127,6 +128,14 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 - Run tests — they should ALL FAIL (feature not implemented yet)
 - If tests pass before implementation → tests are wrong, rewrite
 - Record test count in STATE.md
+
+### Step 4b: Apply Pattern Pre-Flight List
+- For each pattern from the **Pattern Pre-Flight List** (Step 1), write a test or guard that directly exercises the known failure mode before implementing the feature:
+  - If the pattern was "async not awaited," write a test that asserts async behavior
+  - If the pattern was "env var missing," assert env presence in setup
+  - If the pattern was "form state reset," assert form empties on submit
+- This converts accumulated scars into active defense — not "remember to avoid" but "prove it's avoided"
+- If no patterns matched this story's type → skip this step silently
 
 ### Step 5: Implement the Feature
 - Implement the minimum code to make all tests pass
@@ -203,6 +212,8 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 - Append cycle token cost to the Spend Ledger in `halo-run-log.md`
 - If the story failed verification at least once before passing, record the failure pattern in STATE.md under Failure Patterns:
   - Pattern: "Story type: <type>, Failure: <what failed>, Fix: <what fixed it>"
+  - **Deduplicate first**: scan existing patterns for the same `<type>` AND semantically similar `<Failure>`. If a match exists, increment its **Recurrence** count and update **Last seen** instead of appending a new entry. This prevents the section from becoming a noise log of repeats.
+  - **Severity tagging**: mark each pattern `severity: low | medium | high`. `high` = blocked a deploy or required human escalation; `medium` = cost an extra verifier round; `low` = friction only. High-severity patterns are always included in the Pre-Flight List regardless of story-type match.
   - This accumulates over time and helps the implementer proactively avoid known pitfalls
 - Append a 2-3 line summary to `progress.txt`:
   ```
