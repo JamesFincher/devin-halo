@@ -213,10 +213,6 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
   - Token cost (actual) for this cycle — compare to estimate (~190k)
   - Cost trajectory: is this cycle more or less expensive than the last 3 cycles?
   - **One actionable instruction for the next cycle** (e.g. "Next cycle: for form-related stories, write validation tests before UI tests")
-  - **Preserve the last 3 critiques** — do not overwrite old ones. If 3+ critiques exist, drop the oldest beyond 3. This keeps the warm-start window populated for Step 1.
-- **Append to Full Attempt History** in STATE.md with:
-  - Cycle number, story ID, attempt count, verifier verdict chain (e.g., `NEEDS_REVISION → REJECTED → APPROVED`), and the final attempt's token cost
-  - This is the structured log that Step 1 reads to detect escalation patterns and recurring objections across cycles
 - Append cycle token cost to the Spend Ledger in `halo-run-log.md`
 - If the story failed verification at least once before passing, record the failure pattern in STATE.md under Failure Patterns:
   - Pattern: "Story type: <type>, Failure: <what failed>, Fix: <what fixed it>"
@@ -276,7 +272,6 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 | No progress between cycles | Step 1b detects identical git state and halts immediately |
 | Same failure pattern repeats | Failure Patterns section in STATE.md tracks and helps proactively avoid |
 | Critique ignored | Step 1 reads last critique as an instruction, not just a log |
-| **Last N=1 context misses compounding failures** | Warm-start now reads last 3 critiques + Full Attempt History — compounding patterns across cycles become visible instead of being lost each cycle |
 | **Token cost trending up across cycles** | Economic Circuit Breaker (Step 0b) detects trajectory; flag in critique as context-bloat warning |
 | **Denial-of-Wallet — 3 cycles, 2x cost, no deploy** | Step 0b circuit breaker fires → emergency PAUSE before next cycle |
 | **Verifier rejection rate > 80% on last 5 stories** | Step 0b detects → pauses loop; systemic quality issue, not budget |

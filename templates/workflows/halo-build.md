@@ -82,8 +82,8 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 - Read `halo-budget.md` — confirm budget remaining
 - Read `halo-run-log.md` — count today's cycles and token spend
 - Read `progress.txt` — read the last few lines for narrative context from prior cycles
-- Read the **Post-Run Critique** from the last cycle in `STATE.md` — treat it as an **instruction for this cycle**, not just a log. If the critique says "next cycle: write validation tests before form layout tests," do that.
-- Read the **Failure Patterns** section in `STATE.md` — if the current story touches a pattern that has failed before, proactively address the known failure mode
+- Read the **Post-Run Critiques** from the **last 3 cycles** in `STATE.md` — treat them as **instructions for this cycle**, not just logs. The most recent critique is directional; earlier critiques provide compounding context. If fewer than 3 cycles exist, read all available.
+- Read the **Full Attempt History** section in `STATE.md` — accumulates attempt counts, retry reasons, and verifier feedback across ALL prior cycles for escalation pattern detection.
 - If budget exceeded → abort, log, set `STATUS: PAUSED`
 - If 2 consecutive stories failed verification → abort, escalate to human
 
@@ -201,6 +201,8 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
   - Cost trajectory: is this cycle more or less expensive than the last 3 cycles?
   - **One actionable instruction for the next cycle** (e.g. "Next cycle: for form-related stories, write validation tests before UI tests")
 - Append cycle token cost to the Spend Ledger in `halo-run-log.md`
+  - **Preserve the last 3 critiques** — do not overwrite old ones. If 3+ critiques exist, drop the oldest beyond 3.
+- **Append to Full Attempt History** in STATE.md with cycle number, story ID, attempt count, verifier verdict chain, and token cost
 - If the story failed verification at least once before passing, record the failure pattern in STATE.md under Failure Patterns:
   - Pattern: "Story type: <type>, Failure: <what failed>, Fix: <what fixed it>"
   - This accumulates over time and helps the implementer proactively avoid known pitfalls
