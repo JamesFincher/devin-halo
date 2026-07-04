@@ -33,27 +33,60 @@ From `/halo-build`:
 - Read relevant PRD section
 - Read dependency stories for interface context
 
-### Step 2: Check Each Acceptance Criterion
-For EACH criterion:
+### Step 2: Validate Acceptance Criteria Testability
+Before reviewing a single line of code, verify that each acceptance criterion CAN be objectively tested. A criterion that cannot be tested cannot be verified — reviewing code against it is theater. **If any criterion is untestable, short-circuit to NEEDS_REVISION (Step 12) without proceeding to code review.**
+
+For EACH criterion, check the four testability properties:
+
+1. **Observable** — references a concrete system behavior, output, or state change, not a subjective quality
+   - GOOD: "POST /api/users returns 201 with a JSON body containing `id` and `email`"
+   - BAD: "the signup flow is user-friendly"
+2. **Binary-verifiable** — can be marked PASS or FAIL without human interpretation or aesthetic judgment
+   - GOOD: "response time < 200ms at p95 under 100 concurrent requests"
+   - BAD: "the app feels fast and responsive"
+3. **Test-mapped** — at least one test case in the suite exercises this criterion directly (not transitively)
+4. **Specific** — references exact values, thresholds, or named components where applicable, not relative or comparative terms
+
+**Weasel-word blocklist** (criterion containing any of these is presumptively UNTESTABLE unless paired with a concrete metric):
+- `user-friendly`, `intuitive`, `modern`, `clean`, `elegant`, `beautiful`, `polished`
+- `fast`, `performant`, `scalable`, `efficient` (without a specific threshold: ms, QPS, MB)
+- `robust`, `reliable`, `stable`, `secure` (without defined failure conditions or threat model)
+- `generally`, `typically`, `usually`, `in most cases`, `should mostly`
+- `seamless`, `smooth`, `frictionless` (without latency or step-count target)
+
+**Decision per criterion:**
+- All four properties met → `TESTABLE` — proceed to Step 3
+- Any property missing → `UNTESTABLE` — record the specific defect (which property failed, which weasel word or missing threshold)
+
+**Gate rule:** If ANY criterion is `UNTESTABLE`:
+- VERDICT: `NEEDS_REVISION`
+- Feedback: "criterion N rejected as untestable — [property] missing. Rewrite as an observable, binary-verifiable, test-mapped, specific statement before re-implementing."
+- Do NOT proceed to code review (Steps 3-10). There is nothing meaningful to verify against.
+- This prevents the most expensive failure mode: passing tests against vague criteria, then discovering in production that "fast" meant different things to the implementer and the stakeholder.
+
+Record per-criterion testability assessment in the report (Step 11).
+
+### Step 3: Check Each Acceptance Criterion
+For EACH criterion (all must be `TESTABLE` from Step 2):
 - Is it implemented? (read the code)
 - Is it tested? (read the tests)
 - Does the test actually test the criterion? (not just pass)
 - Record per-criterion: PASS / FAIL with details
 
-### Step 3: Review the Diff
+### Step 4: Review the Diff
 - `git diff --name-only` — get changed files
 - Each file: related to story? minimal change? denylist path?
 - Unrelated file → FAIL
 - Denylist path → FAIL and escalate
 - Excessive changes → WARN
 
-### Step 4: Run Full Test Suite
+### Step 5: Run Full Test Suite
 - Run the detected test command for the ENTIRE suite
 - Run linter
 - Run type checker if configured
 - All must pass
 
-### Step 5: Assess Test Quality
+### Step 6: Assess Test Quality
 - Are tests testing the RIGHT things?
 - Meaningful assertions? (not just `expect(true).toBe(true)`)
 - Edge cases covered?
@@ -61,20 +94,20 @@ For EACH criterion:
 - Would these catch a regression?
 - Shallow tests → NEEDS_REVISION with specific feedback
 
-### Step 6: Check Side Effects
+### Step 7: Check Side Effects
 - Could this break anything downstream?
 - Uncovered integration points?
 - Modified shared utilities or components?
 - Potential side effects → WARN
 
-### Step 7: Check Code Quality
+### Step 8: Check Code Quality
 - Follows existing project conventions?
 - Readable and maintainable?
 - Obvious bugs or logic errors?
 - Security concerns (XSS, injection, etc.)?
 - Issues → NEEDS_REVISION with specific feedback
 
-### Step 7: Inspect Collected Evidence
+### Step 9: Inspect Collected Evidence
 Before the reflection debate, gather and verify the **concrete evidence artifacts** produced by the build cycle. A passing test suite reported by the implementer is a claim; the raw output is the proof.
 
 - **Test output**: read `.halo/evidence/test-output-S<NNN>.txt`. Confirm: (a) the runner reported PASS, (b) the test count matches what the implementer claimed, (c) no warnings were masked as passes, (d) no skipped/pending tests are silently inflating the pass rate. If the file is absent → FAIL: "no raw test output captured — cannot verify claim."
@@ -84,7 +117,7 @@ Before the reflection debate, gather and verify the **concrete evidence artifact
 
 Record per-evidence-artifact: VERIFIED / REGRESSION / MISSING in the report.
 
-### Step 8: Multi-Agent Reflection Debate
+### Step 10: Multi-Agent Reflection Debate
 Before issuing a verdict, run a structured adversarial debate with three independent perspectives over the same evidence (diff, tests, acceptance criteria). This catches single-perspective blind spots — a verifier that reasons one way only detects one class of defect. A passing test suite proves the code runs; it does not prove the code is correct.
 
 **Each role is a separate reasoning pass** with a distinct prompt and a distinct failure hypothesis. Run all three before synthesizing the verdict.
@@ -125,16 +158,21 @@ Aggregate the three verdicts into a **Reflection Consensus** before producing th
    - **Block** → flow to `NEEDS_REVISION` with the specific debate finding as feedback
    - **Dismiss** → requires a concrete counter-reason (e.g., "path unreachable because guard at line N returns early" — with the line cited), NOT "looks fine"
 3. **No rubber-stamping rule**: a concern dismissed without evidence is treated as a failed verification. The dismissal IS the verification — it must be falsifiable.
-4. Record the full consensus (each role's verdict + reconciliations) in the report (Step 9)
+4. Record the full consensus (each role's verdict + reconciliations) in the report (Step 11)
 
 **Why three roles and not one**: a single verifier's reasoning modality is correlated with its own blind spots (correlated failure — a verification weakness that defeats one line of reasoning defeats all checks sharing that reasoning). The Skeptic catches what the Logician's formalism misses (malicious/edge inputs); the Logician catches what the Skeptic's pessimism skips (clean logical gaps); the Creative catches what both miss (integration and environmental assumptions). Three diverse modalities beat three copies of the same one.
 
-### Step 9: Produce Verification Report
+### Step 11: Produce Verification Report
 ```
 VERIFICATION REPORT
 ===================
 Story: SXXX — <title>
 Date: <timestamp>
+
+Acceptance Criteria Testability (Step 2):
+  [TESTABLE/UNTESTABLE] 1. <criterion> — <defect if any>
+  [TESTABLE/UNTESTABLE] 2. <criterion> — <defect if any>
+  Gate: PASSED (all testable) / SHORT-CIRCUITED to NEEDS_REVISION
 
 Acceptance Criteria:
   [PASS/FAIL] 1. <criterion>
@@ -166,12 +204,12 @@ VERDICT: APPROVED / REJECTED / NEEDS_REVISION
 NOTES: <specific feedback>
 ```
 
-### Step 10: Return Verdict
+### Step 12: Return Verdict
 - **APPROVED** → story can proceed to build and deploy (requires unanimous Reflection Consensus AND evidence artifacts VERIFIED — raw test output present and matched, no coverage regression, deploy evidence captured)
 - **NEEDS_REVISION** → implementer can fix and retry (max 3 attempts); include the specific debate findings as feedback
 - **REJECTED** → start over or escalate to human
 
-### Step 11: Log Verification
+### Step 13: Log Verification
 - Append to `halo-run-log.md`: timestamp, story ID, verdict, criteria summary, test results, notes
 
 ## Rules
@@ -179,13 +217,14 @@ NOTES: <specific feedback>
 - **Verifier must be a separate agent session** from the implementer
 - **Run the full test suite**, not just new tests
 - **Check EVERY acceptance criterion** — partial implementation is not acceptable
-- **Check test quality** — passing tests that don't test the right thing are useless
+- **Check test quality** — passing tests that don't test the right thing are useless (Step 6)
 - **No denylist paths without human approval**
 - **Max 3 attempts per story**, then escalate
 - **Verifier does not fix things** — only verifies and provides feedback
 - **Be specific** — "criterion 3 not met" is not enough; say exactly what's missing
 - **Tech-agnostic** — use whatever test runner and linter the project uses
-- **Run the reflection debate** — the three-role adversarial pass (Step 8) is mandatory before any APPROVED verdict. A verdict without a recorded Reflection Consensus is automatically INVALID and treated as a rubber-stamp.
+- **Run the reflection debate** — the three-role adversarial pass (Step 10) is mandatory before any APPROVED verdict. A verdict without a recorded Reflection Consensus is automatically INVALID and treated as a rubber-stamp.
+- **Reject untestable criteria** — if any acceptance criterion fails the testability gate (Step 2), the verifier short-circuits to NEEDS_REVISION without proceeding to code review. Reviewing code against untestable criteria is theater.
 
 ## Denylist Paths
 
@@ -203,11 +242,11 @@ Default denylist (customize in HALO.md):
 | Failure | Mitigation |
 |---------|------------|
 | Verifier rubber-stamps | Separate session; check each criterion individually |
-| Tests pass but don't test right thing | Step 5 explicitly checks test quality |
+| Tests pass but don't test right thing | Step 6 explicitly checks test quality |
 | Infinite revision loop | Max 3 attempts, then escalate |
 | Verifier too strict | Track approval rate; if >80% rejection, review with human |
 | Denylist bypassed | Hard check — automatic REJECT + escalate |
-| Vague acceptance criteria | Flag in report; /halo-init should generate specific criteria |
+| Vague acceptance criteria | Step 2 testability gate rejects them BEFORE code review; /halo-init should generate specific criteria matching the four testability properties |
 | Single-perspective blind spot | Three diverse roles (Skeptic/Logician/Creative); correlated-failure trap: if two roles share a reasoning modality, redesign one |
 | Reflection rubber-stamped | Mandatory Reconciliation clause — dismissals need falsifiable evidence; no-consensus verdict is INVALID |
-| Evidence claims without proof | Step 7 inspects raw artifacts (.halo/evidence/) — implementer claims are cross-checked against captured test output, coverage delta, and deploy evidence before APPROVED |
+| Evidence claims without proof | Step 9 inspects raw artifacts (.halo/evidence/) — implementer claims are cross-checked against captured test output, coverage delta, and deploy evidence before APPROVED |
