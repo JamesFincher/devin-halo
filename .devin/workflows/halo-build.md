@@ -151,9 +151,11 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 
 ### Step 6: Run Full Test Suite
 - Run the ENTIRE test suite using the detected test command
+- **Capture full test output** (stdout + stderr) to `.halo/evidence/test-output-S<NNN>.txt` — this is the raw evidence the verifier inspects, not a pass/fail summary. Truncation hides failures; if the runner emits >50K lines, capture the head + tail with a note.
 - All tests must pass — new and existing
 - Run linter using detected lint command
 - Run type checker if configured
+- **If coverage tooling is available**, capture the coverage report to `.halo/evidence/coverage-S<NNN>.txt` (or `.json`) and compute the **coverage delta** vs the last deployed story's baseline (stored at `.halo/evidence/coverage-baseline`). Record: total %, delta %, and per-file coverage for changed files.
 - Record results
 
 **⏸️ END EXECUTE PHASE — flush working memory. Re-read changed files list and test results on next invocation.**
@@ -187,6 +189,7 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
     - (adapt for detected platform)
 - Wait for deployment to complete
 - Capture the preview URL from output
+- **Evidence capture**: store the preview URL in `.halo/evidence/deploy-S<NNN>.txt`. If a headless screenshot tool is available (`chromium --headless --screenshot`, `playwright`, `puppeteer`), capture a screenshot of the preview URL to `.halo/evidence/screenshot-S<NNN>.png` and record a visual smoke check (page loads without console error). If no tool is available, note `screenshot: unavailable` in the evidence file — absence is recorded, not silent.
 - If deployment fails:
     - Config issue → fix and retry (max 2)
     - Env var issue → escalate to human
@@ -195,7 +198,9 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 
 ### Step 11: Commit and Update State
 - `git add -A`
+- **Evidence bundling**: if `.halo/evidence/` exists with this story's artifacts, include them in the commit (`git add .halo/evidence/*-S<NNN>.*`) and reference the evidence path in the commit body. Evidence is part of the audit trail, not ephemeral — it ships with the commit so post-hoc review can reconstruct what the verifier saw.
 - Commit: `feat: SXXX — <story title>`
+- **Coverage baseline rotation**: on successful deploy, update `.halo/evidence/coverage-baseline` with this story's coverage report so the next cycle's delta is computed against the new floor. Rotation happens only on deploy, never on failed verification.
 - Update `STATE.md`:
     - Mark story status as `deployed`
     - Update Story Status Summary counts
@@ -281,6 +286,7 @@ Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
 | **Denial-of-Wallet — 3 cycles, 2x cost, no deploy** | Step 0b circuit breaker fires → emergency PAUSE before next cycle |
 | **Verifier rejection rate > 80% on last 5 stories** | Step 0b detects → pauses loop; systemic quality issue, not budget |
 | **No deploy after 5 cycles** | Step 0b tracks cycles-since-deploy → pauses loop; tokens flowing with zero output |
+| **Evidence not captured** | Step 6 + Step 10 write raw test output + coverage + deploy evidence to .halo/evidence/; verifier Step 7 blocks APPROVED if artifacts are MISSING |
 
 ## What the Human Sees
 

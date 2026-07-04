@@ -74,6 +74,16 @@ For EACH criterion:
 - Security concerns (XSS, injection, etc.)?
 - Issues → NEEDS_REVISION with specific feedback
 
+### Step 7: Inspect Collected Evidence
+Before the reflection debate, gather and verify the **concrete evidence artifacts** produced by the build cycle. A passing test suite reported by the implementer is a claim; the raw output is the proof.
+
+- **Test output**: read `.halo/evidence/test-output-S<NNN>.txt`. Confirm: (a) the runner reported PASS, (b) the test count matches what the implementer claimed, (c) no warnings were masked as passes, (d) no skipped/pending tests are silently inflating the pass rate. If the file is absent → FAIL: "no raw test output captured — cannot verify claim."
+- **Coverage delta**: read `.halo/evidence/coverage-S<NNN>.txt` (if present). Check: (a) total coverage did not drop below the baseline by more than 2 percentage points (a coverage regression is a side effect), (b) per-file coverage for each changed file is >0% (a changed file with 0% coverage means the implementer shipped untested code). If coverage tooling is unavailable, note `coverage: unavailable` and proceed — absence is acceptable, a regression is not.
+- **Deploy evidence**: read `.halo/evidence/deploy-S<NNN>.txt`. Confirm the preview URL is recorded and (if a screenshot exists at `.halo/evidence/screenshot-S<NNN>.png`) that a visual smoke check was performed. If the screenshot is marked `unavailable`, note it — do not block.
+- **Evidence completeness check**: every acceptance criterion should have at least one corresponding test in the raw output. If a criterion has no test trace → NEEDS_REVISION: "criterion N has no test coverage in captured output."
+
+Record per-evidence-artifact: VERIFIED / REGRESSION / MISSING in the report.
+
 ### Step 8: Multi-Agent Reflection Debate
 Before issuing a verdict, run a structured adversarial debate with three independent perspectives over the same evidence (diff, tests, acceptance criteria). This catches single-perspective blind spots — a verifier that reasons one way only detects one class of defect. A passing test suite proves the code runs; it does not prove the code is correct.
 
@@ -135,12 +145,15 @@ Changed Files:
   ...
 
 Test Suite: <N> tests — <N> passing, <N> failing
+Test Output Evidence: .halo/evidence/test-output-S<NNN>.txt — VERIFIED/MISSING
+Coverage: <total>% (delta <+/->% vs baseline) — VERIFIED/REGRESSION/UNAVAILABLE
 Lint: passing/failing
 Type check: passing/failing/N/A
 
 Test Quality: GOOD/POOR — <details>
 Side Effects: None/<details>
 Code Quality: GOOD/POOR — <details>
+Deploy Evidence: .halo/evidence/deploy-S<NNN>.txt — VERIFIED/MISSING | screenshot: VERIFIED/UNAVAILABLE
 Denylist: No denylist paths touched / VIOLATION
 
 Reflection Consensus:
@@ -154,7 +167,7 @@ NOTES: <specific feedback>
 ```
 
 ### Step 10: Return Verdict
-- **APPROVED** → story can proceed to build and deploy (requires unanimous Reflection Consensus)
+- **APPROVED** → story can proceed to build and deploy (requires unanimous Reflection Consensus AND evidence artifacts VERIFIED — raw test output present and matched, no coverage regression, deploy evidence captured)
 - **NEEDS_REVISION** → implementer can fix and retry (max 3 attempts); include the specific debate findings as feedback
 - **REJECTED** → start over or escalate to human
 
@@ -197,3 +210,4 @@ Default denylist (customize in HALO.md):
 | Vague acceptance criteria | Flag in report; /halo-init should generate specific criteria |
 | Single-perspective blind spot | Three diverse roles (Skeptic/Logician/Creative); correlated-failure trap: if two roles share a reasoning modality, redesign one |
 | Reflection rubber-stamped | Mandatory Reconciliation clause — dismissals need falsifiable evidence; no-consensus verdict is INVALID |
+| Evidence claims without proof | Step 7 inspects raw artifacts (.halo/evidence/) — implementer claims are cross-checked against captured test output, coverage delta, and deploy evidence before APPROVED |
