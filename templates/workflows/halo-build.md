@@ -47,7 +47,35 @@ Before starting a new build cycle, run an economic sanity check using the Spend 
 3. **Check cost escalation rate**: if per-cycle cost is trending up over 3 consecutive cycles, log a warning and flag in the critique — this may indicate context bloat or increasing story complexity
 4. Only proceed to build cycle if ALL economic signals are GREEN
 
+
+## Execution Architecture: Three-Phase Context Model
+
+Halo-build uses a **Plan → Execute → Verify** three-phase architecture to preserve context
+integrity in long-running loops. The build agent's context window is finite; phases let the
+agent clear working memory between **qualitatively different kinds of work** while state
+persists to disk via `STATE.md`, `halo-run-log.md`, and `progress.txt`.
+
+| Phase | Purpose | Key Artifact | Context Anchor |
+|-------|---------|--------------|----------------|
+| **PLAN** (Steps 0-3) | Read state, pick story, study codebase | Story + acceptance criteria in working memory | `STATE.md`, `progress.txt` |
+| **EXECUTE** (Steps 4-6) | TDD, implement, full test suite | Passing test suite | New tests, changed files |
+| **VERIFY** (Steps 7-12) | Verifier, build, deploy, commit, critique | Deployed checkpoint URL | Verifier verdict, git diff |
+
+**Context clearing rules:**
+- After each phase, the agent **flushes detailed working memory** and re-reads only the
+  minimal state artifacts needed for the next phase.
+- PLAN passes the story + acceptance criteria + file list to EXECUTE.
+- EXECUTE passes changed files + test results to VERIFY.
+- VERIFY writes everything back to disk for the next cycle's PLAN phase.
+- This prevents the "lost-in-the-middle" effect (accuracy degrades past ~50K tokens) and
+  keeps KV-cache hits high by reusing the same preamble for each phase invocation.
+
+**Token budget per phase:** ~60k (PLAN), ~90k (EXECUTE), ~40k (VERIFY) = ~190k/cycle.
+Cycles exceeding this by >20% trigger the Economic Circuit Breaker.
+
 ## Build Cycle Steps
+
+### ━━━ PHASE 1: PLAN ━━━
 
 ### Step 1: Read State and Budget
 - Read `STATE.md` completely
@@ -63,11 +91,13 @@ Before starting a new build cycle, run an economic sanity check using the Spend 
 - Run `git status --porcelain` and `git log --oneline -1` to capture current state
 - Compare against the last cycle's recorded git state (from `progress.txt`)
 - If the git state is **identical** to the last cycle (same HEAD commit, same working tree) AND no story was deployed last cycle:
-  - This means the previous cycle made no progress — abort immediately
-  - Log "no-progress detected — halting to prevent runaway" to `halo-run-log.md`
-  - Set `STATUS: PAUSED` in `STATE.md`
-  - Escalate to human: "Halo detected no progress between cycles. Last cycle may have failed silently. Review STATE.md and halo-run-log.md."
+- This means the previous cycle made no progress — abort immediately
+- Log "no-progress detected — halting to prevent runaway" to `halo-run-log.md`
+- Set `STATUS: PAUSED` in `STATE.md`
+- Escalate to human: "Halo detected no progress between cycles. Last cycle may have failed silently. Review STATE.md and halo-run-log.md."
 - This check prevents the most common weekend disaster: the loop spinning indefinitely without making changes
+
+**⏸️ END PLAN PHASE — flush working memory. Re-read STATE.md, progress.txt on next invocation.**
 
 ### Step 2: Pick Next Story
 - Read the Build Backlog in `STATE.md`
@@ -87,6 +117,8 @@ Before starting a new build cycle, run an economic sanity check using the Spend 
 - Read `AGENTS.md` for build/test/lint commands
 - Identify files to create or modify
 - Check denylist paths — if touched, escalate to human
+
+### ━━━ PHASE 2: EXECUTE ━━━
 
 ### Step 4: Write Tests First (TDD)
 - Write tests that validate each acceptance criterion
@@ -110,6 +142,10 @@ Before starting a new build cycle, run an economic sanity check using the Spend 
 - Run linter using detected lint command
 - Run type checker if configured
 - Record results
+
+**⏸️ END EXECUTE PHASE — flush working memory. Re-read changed files list and test results on next invocation.**
+
+### ━━━ PHASE 3: VERIFY ━━━
 
 ### Step 7: Verifier Sub-Agent
 - Spawn a **separate verifier** using `/halo-verifier`
@@ -180,6 +216,8 @@ Before starting a new build cycle, run an economic sanity check using the Spend 
 - Cycle cap reached → log "daily cycle cap reached", exit
 - All stories done → set `STATUS: COMPLETE`, log, exit
 - All remaining blocked → escalate, exit
+
+**⏸️ END VERIFY PHASE — write all state to disk. Next cycle's PLAN phase picks up fresh.**
 
 ## Rules
 
